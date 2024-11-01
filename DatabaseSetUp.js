@@ -1,11 +1,4 @@
-const mysql = require('mysql2');
-const createDatabase = 'CREATE DATABASE IF NOT EXISTS `akademi-koding`';
-
-var connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',       
-    password: '',  
-});
+const connection = require('./Connection');
 
 connection.connect(err => {
     if (err) {
@@ -15,31 +8,14 @@ connection.connect(err => {
     console.log('Connected to Local');
 });
 
-function initState() {
-    connection.query(createDatabase, (err, result) => {
-        if (err) {
-            console.error('Error creating database:', err);
-            return;
-        }
-        console.log('Database created');
-    });
-
-    connection = mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: '',
-        database: 'akademi-koding'
-    });
-
-}
 
 function createTable() {
     const createUserTable = `
     CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        email VARCHAR(255) NOT NULL,
         username VARCHAR(100) NOT NULL,
-        password VARCHAR(255) NOT NULL
+        password VARCHAR(255) NOT NULL,
+        token TEXT NOT NULL
     );
     `;
     connection.query(createUserTable, (err, result) => {
@@ -55,6 +31,7 @@ function createTable() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(255) NOT NULL,
+        link TEXT NOT NULL,
         description TEXT NOT NULL
     );
     `;
@@ -75,6 +52,7 @@ function createTable() {
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(255) NOT NULL,
         description TEXT NOT NULL,
+        link TEXT NOT NULL,
         project TEXT NOT NULL
     );
     `; 
@@ -180,8 +158,7 @@ function createTable() {
 
 }
 
-module.exports = { initState, createTable, connection };
-
+module.exports = {createTable};
 
 
 
