@@ -2,6 +2,7 @@ const express = require('express');
 const database = require('./DatabaseSetUp');
 const course = require('./Course');
 const user = require('./User');
+const moduleTable = require('./Module');
 
 const app = express();
 const cors = require("cors");
@@ -118,6 +119,82 @@ app.post('/login', async (req, res) => {
     } catch (error) {
         console.error('Error logging in:', error);
         res.status(500).json({ error: 'Error logging in' }); 
+    }
+});
+
+// CRUD module
+app.post('/add/module', async (req, res) => {
+    const { course_id, name, link, slug, description, project } = req.body;
+    try {
+        const newModule = await moduleTable.addModule(course_id, name, link, slug, description, project);
+        res.status(201).send(newModule);
+    } catch (error) {
+        res.status(500).send({ error: 'Error adding module' });
+    }
+});
+
+app.post('/update/module', async (req, res) => {
+    const { id, name, link, slug, description, project } = req.body;
+    try {
+        const updatedModule = await moduleTable.updateModule(id, name, link, slug, description, project);
+        res.status(200).send(updatedModule);
+    } catch (error) {
+        res.status(500).send({ error: 'Error updating module' });
+    }
+});
+
+app.get('/modules', async (req, res) => {
+    try {
+        const modules = await moduleTable.getAllModules();
+        res.status(200).send(modules);
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting modules' });
+    }
+});
+
+app.get('/module/:slug', async (req, res) => {
+    try {
+        const module_slug = await moduleTable.getModuleBySlug(req.params.slug);
+        if (!module_slug.length) {
+            return res.status(404).send({ error: 'Module not found' });
+        }
+        res.status(200).send(module_slug);
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting module' });
+    }
+});
+
+app.get('/module/get/:idModule', async (req, res) => {
+    try {
+        const module_id = await moduleTable.getModuleById(req.params.idModule);
+        if (!module_id.length) {
+            return res.status(404).send({ error: 'Module not found' });
+        }
+        res.status(200).send(module_id);
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting module' });
+    }
+});
+
+
+app.get('/module/course/:course_id', async (req, res) => {
+    try {
+        const module_course = await moduleTable.getModuleByCourseId(req.params.course_id);
+        if (!module_course.length) {
+            return res.status(404).send({ error: 'Module not found' });
+        }
+        res.status(200).send(module_course);
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting module' });
+    }
+});
+
+app.delete('/delete/module/:slug', async (req, res) => {
+    try {
+        const delete_module = await moduleTable.removeModule(req.params.slug);
+        res.status(200).send(delete_module);
+    } catch (error) {
+        res.status(500).send({ error: 'Error deleting module' });
     }
 });
 
