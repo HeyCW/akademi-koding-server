@@ -4,8 +4,6 @@ const database = require('./DatabaseSetUp');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-
-
 database.initState();
 database.createTable();
 
