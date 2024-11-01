@@ -55,7 +55,7 @@ function createTable() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(255) NOT NULL,
-        description TEXT NOT NULL,
+        description TEXT NOT NULL
     );
     `;
 
@@ -71,11 +71,11 @@ function createTable() {
     CREATE TABLE IF NOT EXISTS modules (
         id INT AUTO_INCREMENT PRIMARY KEY,
         course_id INT NOT NULL,
-        FOREIGN KEY (course_id) REFERENCES courses(id)
+        FOREIGN KEY (course_id) REFERENCES courses(id),
         name VARCHAR(255) NOT NULL,
         slug VARCHAR(255) NOT NULL,
         description TEXT NOT NULL,
-        project TEXT NOT NULL,
+        project TEXT NOT NULL
     );
     `; 
 
@@ -91,10 +91,10 @@ function createTable() {
     CREATE TABLE IF NOT EXISTS chapters (
         id INT AUTO_INCREMENT PRIMARY KEY,
         module_id INT NOT NULL,
-        FOREIGN KEY (module_id) REFERENCES modules(id)
+        FOREIGN KEY (module_id) REFERENCES modules(id),
         name VARCHAR(255) NOT NULL,
         type VARCHAR(255) NOT NULL,
-        content TEXT NOT NULL,
+        content TEXT NOT NULL
     );
     `;
 
@@ -110,10 +110,10 @@ function createTable() {
     CREATE TABLE IF NOT EXISTS quizzes (
         id INT AUTO_INCREMENT PRIMARY KEY,
         chapter_id INT NOT NULL,
-        FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+        FOREIGN KEY (chapter_id) REFERENCES chapters(id),
         question TEXT NOT NULL,
         answer TEXT NOT NULL,
-        choices TEXT NOT NULL, 
+        choices TEXT NOT NULL
     );
     `;
 
@@ -129,11 +129,11 @@ function createTable() {
     CREATE TABLE IF NOT EXISTS detail_quizzes (
         id INT AUTO_INCREMENT PRIMARY KEY,
         quiz_id INT NOT NULL,
-        FOREIGN KEY (quiz_id) REFERENCES quizzes(id)
+        FOREIGN KEY (quiz_id) REFERENCES quizzes(id),
         user_id INT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        FOREIGN KEY (user_id) REFERENCES users(id),
         answer TEXT NOT NULL,
-        score INT NOT NULL,
+        score INT NOT NULL
     );
     `;
 
@@ -149,11 +149,11 @@ function createTable() {
     CREATE TABLE IF NOT EXISTS detail_projects (
         id INT AUTO_INCREMENT PRIMARY KEY,
         module_id INT NOT NULL,
-        FOREIGN KEY (module_id) REFERENCES modules(id)
+        FOREIGN KEY (module_id) REFERENCES modules(id),
         user_id INT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        FOREIGN KEY (user_id) REFERENCES users(id),
         link TEXT NOT NULL,
-        score INT NOT NULL,
+        score INT NOT NULL
     );
     `;
 
@@ -169,11 +169,11 @@ function createTable() {
     CREATE TABLE IF NOT EXISTS user_chapters (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id)
+        FOREIGN KEY (user_id) REFERENCES users(id),
         chapter_id INT NOT NULL,
-        FOREIGN KEY (chapter_id) REFERENCES chapters(id)
+        FOREIGN KEY (chapter_id) REFERENCES chapters(id),
         status BOOLEAN NOT NULL,
-        score INT NOT NULL,
+        score INT NOT NULL
     );
     `;
 
