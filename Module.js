@@ -119,4 +119,20 @@ function removeModule(slug) {
     });
 }
 
-module.exports = { addModule, updateModule, getAllModules, getModuleBySlug, getModuleById, getModuleByCourseId, removeModule };
+function removeModuleById(idModule) {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `DELETE FROM modules WHERE id = ?`,
+            [idModule],
+            (err, result) => {
+                if (err) {
+                    console.error('Error deleting module:', err);
+                    return reject(err);
+                }
+                resolve({ message: 'Module deleted' });
+            }
+        );
+    });
+}
+
+module.exports = { addModule, updateModule, getAllModules, getModuleBySlug, getModuleById, getModuleByCourseId, removeModule, removeModuleById };

@@ -13,7 +13,7 @@ function createTable() {
     const createUserTable = `
     CREATE TABLE IF NOT EXISTS users (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        username VARCHAR(100) NOT NULL,
+        username VARCHAR(100) NOT NULL UNIQUE,
         password VARCHAR(255) NOT NULL,
         token TEXT NOT NULL
     );
@@ -29,8 +29,8 @@ function createTable() {
     const createCourseTable = `
     CREATE TABLE IF NOT EXISTS courses (
         id INT AUTO_INCREMENT PRIMARY KEY,
-        name VARCHAR(255) NOT NULL,
-        slug VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL UNIQUE,
+        slug VARCHAR(255) NOT NULL UNIQUE,
         link TEXT NOT NULL,
         description TEXT NOT NULL
     );
@@ -49,8 +49,8 @@ function createTable() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         course_id INT NOT NULL,
         FOREIGN KEY (course_id) REFERENCES courses(id),
-        name VARCHAR(255) NOT NULL,
-        slug VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL UNIQUE,
+        slug VARCHAR(255) NOT NULL UNIQUE,
         description TEXT NOT NULL,
         link TEXT NOT NULL,
         project TEXT NOT NULL
@@ -70,7 +70,7 @@ function createTable() {
         id INT AUTO_INCREMENT PRIMARY KEY,
         module_id INT NOT NULL,
         FOREIGN KEY (module_id) REFERENCES modules(id),
-        name VARCHAR(255) NOT NULL,
+        name VARCHAR(255) NOT NULL UNIQUE,
         type VARCHAR(255) NOT NULL,
         content TEXT NOT NULL
     );

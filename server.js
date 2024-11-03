@@ -3,6 +3,7 @@ const database = require('./DatabaseSetUp');
 const course = require('./Course');
 const user = require('./User');
 const moduleTable = require('./Module');
+const chapter = require('./Chapter');
 
 const app = express();
 const cors = require("cors");
@@ -97,12 +98,14 @@ app.delete('/delete/course/:slug', async (req, res) => {
 // CRUD user
 app.post('/add/user', async (req, res) => {
     const { username, password } = req.body;
-    
+
     try {
         const newUser = await user.addUser(username, password);
         return res.status(201).json(newUser); 
     } catch (error) {
-        console.error('Error adding user:', error);
+        if (error.error === 'Username already exists') {
+            return res.status(400).json({ error: 'Username already exists' });
+        }
         return res.status(500).json({ error: 'Error adding user' });
     }
 });
@@ -195,6 +198,63 @@ app.delete('/delete/module/:slug', async (req, res) => {
         res.status(200).send(delete_module);
     } catch (error) {
         res.status(500).send({ error: 'Error deleting module' });
+    }
+});
+
+app.delete('/delete/module/id/:idModule', async (req, res) => {
+    try {
+        const delete_module = await moduleTable.removeModuleById(req.params.idModule);
+        res.status(200).send(delete_module);
+    } catch (error) {
+        res.status(500).send({ error: 'Error deleting module' });
+    }
+});
+
+// CRUD chapter
+app.post('/add/chapter', async (req, res) => {
+    try{
+        const { module_id, name, type, content } = req.body;
+        const newChapter = await chapter.addChapter(module_id, name, type, content);
+        res.status(201).send(newChapter);
+    } catch (error) {
+        res.status(500).send({ error: 'Error adding chapter' });
+    }
+
+});
+
+app.post('/update/chapter', async (req, res) => {
+    try{
+        const { id, name, type, content } = req.body;
+        const updatedChapter = await chapter.updateChapter(id, name, type, content);
+        res.status(200).send(updatedChapter);
+    } catch (error) {
+        res.status(500).send({ error: 'Error updating chapter' });
+    }
+});
+
+app.get('/chapters', async (req, res) => {
+        const chapters = await chapter.getAllChapters();
+        res.status(200).send(chapters);
+});
+
+app.get('/chapter/:id', async (req, res) => {
+    try {
+        const chapter_id = await chapter.getChapterById(req.params.id);
+        if (!chapter_id.length) {
+            return res.status(404).send({ error: 'Chapter not found' });
+        }
+        res.status(200).send(chapter_id);
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting chapter' });
+    }
+});
+
+app.delete('/delete/chapter/:id', async (req, res) => {
+    try {
+        const delete_chapter = await chapter.removeChapterById(req.params.id);
+        res.status(200).send(delete_chapter);
+    } catch (error) {
+        res.status(500).send({ error: 'Error deleting chapter' });
     }
 });
 

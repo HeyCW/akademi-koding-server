@@ -32,14 +32,15 @@ function addUser(username, password) {
 
         connection.query(
             `INSERT INTO users (username, password, token) VALUES (?, ?, ?)`, 
-            [username, encryptedPassword, token], // Gunakan parameter untuk menghindari SQL Injection
+            [username, encryptedPassword, token], 
             (err, result) => {
                 if (err) {
-                    console.error('Error adding user:', err);
-                    return reject(err); // Menolak promise jika ada error
+                    if (err.code === 'ER_DUP_ENTRY') {
+                        return reject({ error: 'Username already exists' });
+                    }
+                    return reject(err); 
                 }
-                
-                resolve({ message: 'User added successfully' }); // Resolving promise dengan pesan
+                resolve({ message: 'User added successfully' }); 
             }
         );
     });
