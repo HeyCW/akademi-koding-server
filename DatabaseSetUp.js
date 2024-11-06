@@ -91,7 +91,8 @@ function createTable() {
         FOREIGN KEY (chapter_id) REFERENCES chapters(id),
         question TEXT NOT NULL,
         answer TEXT NOT NULL,
-        choices TEXT NOT NULL
+        choices TEXT NOT NULL,
+        score INT NOT NULL
     );
     `;
 
@@ -131,7 +132,7 @@ function createTable() {
         user_id INT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id),
         link TEXT NOT NULL,
-        score INT NOT NULL
+        score INT
     );
     `;
 
@@ -151,7 +152,7 @@ function createTable() {
         chapter_id INT NOT NULL,
         FOREIGN KEY (chapter_id) REFERENCES chapters(id),
         status BOOLEAN NOT NULL,
-        score INT NOT NULL
+        score INT
     );
     `;
 

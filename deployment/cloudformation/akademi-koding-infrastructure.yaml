@@ -1,0 +1,243 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS infrastructure setup for Akademi Koding
+
+Resources:
+  AccountVpc:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: '10.0.0.0/16'
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: akademi-koding-vpc
+  
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: akademi-koding-igw
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref AccountVpc
+      InternetGatewayId: !Ref InternetGateway
+
+  PublicSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AccountVpc
+      CidrBlock: '10.0.1.0/24'
+      AvailabilityZone: 'us-east-1a'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: akademi-koding-public-subnet-1
+  
+  PublicSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AccountVpc
+      CidrBlock: '10.0.2.0/24'
+      AvailabilityZone: 'us-east-1b'
+      MapPublicIpOnLaunch: true
+      Tags:
+        - Key: Name
+          Value: akademi-koding-public-subnet-2
+  
+  PrivateSubnet1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AccountVpc
+      CidrBlock: '10.0.101.0/24'
+      AvailabilityZone: 'us-east-1a'
+      Tags:
+        - Key: Name
+          Value: akademi-koding-private-subnet-1
+  
+  PrivateSubnet2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref AccountVpc
+      CidrBlock: '10.0.102.0/24'
+      AvailabilityZone: 'us-east-1b'
+      Tags:
+        - Key: Name
+          Value: akademi-koding-private-subnet-2
+
+  NatEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc 
+
+  Nat:
+    Type: AWS::EC2::NatGateway
+    Properties:
+      AllocationId: !GetAtt NatEIP.AllocationId
+      SubnetId: !Ref PublicSubnet1
+      Tags:
+        - Key: Name
+          Value: akademi-koding-nat
+
+  PublicRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AccountVpc
+      Tags:
+        - Key: Name
+          Value: akademi-koding-route-table
+  
+  PublicRoute:
+    Type: AWS::EC2::Route
+    DependsOn: AttachGateway
+    Properties:
+      RouteTableId: !Ref PublicRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      GatewayId: !Ref InternetGateway
+
+  PrivateRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref AccountVpc
+      Tags:
+        - Key: Name
+          Value: akademi-koding-private-route-table-1
+  
+  PrivateRoute:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId: !Ref PrivateRouteTable
+      DestinationCidrBlock: '0.0.0.0/0'
+      NatGatewayId: !Ref Nat
+
+  PublicSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet1
+      RouteTableId: !Ref PublicRouteTable
+      
+  PublicSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PublicSubnet2
+      RouteTableId: !Ref PublicRouteTable
+
+  PrivateSubnet1RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet1
+      RouteTableId: !Ref PrivateRouteTable
+  
+  PrivateSubnet2RouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref PrivateSubnet2
+      RouteTableId: !Ref PrivateRouteTable
+  
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Enable HTTP and SSH access
+      VpcId: !Ref AccountVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: '22'
+          ToPort: '22'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '80'
+          ToPort: '80'
+          CidrIp: '0.0.0.0/0'
+        - IpProtocol: tcp
+          FromPort: '3306'
+          ToPort: '3306'
+          CidrIp: '0.0.0.0/0'
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: '0.0.0.0/0'
+  
+  SubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for Akademi Koding RDS
+      SubnetIds:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      Tags:
+        - Key: Name
+          Value: akademi-koding-rds-subnet-group
+  
+  DBInstance:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AllocatedStorage: 10
+      DBInstanceClass: db.t3.micro
+      Engine: mysql
+      EngineVersion: '8.0'
+      MasterUsername: Admin123
+      MasterUserPassword: Admin12345
+      DBSubnetGroupName: !Ref SubnetGroup
+      DBName: akademikoding
+      PubliclyAccessible: true 
+      StorageEncrypted: true
+      VPCSecurityGroups:
+        - !Ref SecurityGroup
+      Tags:
+        - Key: Name
+          Value: akademi-koding-rds
+
+Outputs:
+  AccountVpcId:
+    Value: !Ref AccountVpc
+    Description: VPC ID of the Akademi Koding VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCId"
+  AccountVpcCidr:
+    Value: !GetAtt AccountVpc.CidrBlock
+    Description: CIDR block of the Akademi Koding VPC
+    Export:
+      Name: !Sub "${AWS::StackName}-VPCCidr"
+  PublicSubnet1Id:
+    Value: !Ref PublicSubnet1
+    Description: Subnet ID of the Akademi Koding Public Subnet 1
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet1Id"
+  PublicSubnet2Id:
+    Value: !Ref PublicSubnet2
+    Description: Subnet ID of the Akademi Koding Public Subnet 2
+    Export:
+      Name: !Sub "${AWS::StackName}-PublicSubnet2Id"
+  PrivateSubnet1Id:
+    Value: !Ref PrivateSubnet1
+    Description: Subnet ID of the Akademi Koding Private Subnet 1
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet1Id"
+  PrivateSubnet2Id:
+    Value: !Ref PrivateSubnet2
+    Description: Subnet ID of the Akademi Koding Private Subnet 2
+    Export:
+      Name: !Sub "${AWS::StackName}-PrivateSubnet2Id"
+  RDSInstanceEndpoint:
+    Value: !GetAtt DBInstance.Endpoint.Address
+    Description: Endpoint of the Akademi Koding RDS instance
+    Export:
+      Name: !Sub "${AWS::StackName}-RDSInstanceEndpoint"
+  RDSInstancePort:
+    Value: !GetAtt DBInstance.Endpoint.Port
+    Description: Port of the Akademi Koding RDS instance
+    Export:
+      Name: !Sub "${AWS::StackName}-RDSInstancePort"
+  RDSInstanceUsername:
+    Value: admin
+    Description: Username of the Akademi Koding RDS instance
+    Export:
+      Name: !Sub "${AWS::StackName}-RDSInstanceUsername"
+  RDSInstancePassword:
+    Value: admin123
+    Description: Password of the Akademi K
+
+Metadata:
+  MyMetaData:
+    VPCId: !Ref AccountVpc
