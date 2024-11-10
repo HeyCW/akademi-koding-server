@@ -7,7 +7,9 @@ const chapter = require('./Chapter');
 const multer = require('multer');
 const path = require('path');
 const uploadFile = require('./cobas3'); // Import the S3 upload function
+const Memcached = require('memcached');
 
+const memcached = new Memcached('akademi-koding-ebamwh.serverless.apse2.cache.amazonaws.com:11211');
 const app = express();
 const cors = require("cors");
 const PORT = process.env.PORT || 3000;
@@ -78,25 +80,65 @@ app.post('/update/course', async (req, res) => {
 });
 
 app.get('/courses', async (req, res) => {
-    try {
+    const cacheKey = 'courses';
+
+    const data = await new Promise((resolve, reject) => {
+        memcached.get(cacheKey, (err, data) => {
+            if (err) return reject(err);
+            resolve(data);
+        });
+    });
+
+    if (data) {
+        return res.status(200).send(JSON.parse(data));
+    } else {
         const courses = await course.getCourses();
-        res.status(200).send(courses);
-    } catch (error) {
-        res.status(500).send({ error: 'Error getting courses' });
+        await new Promise((resolve, reject) => {
+            memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
+                if (err) return reject(err);
+                resolve();
+            });
+        });
+        return res.status(200).send(courses);
     }
+
 });
 
+
 app.get('/course/:slug', async (req, res) => {
+    const cacheKey = `course:${req.params.slug}`;
+
     try {
-        const course_slug = await course.getCourse(req.params.slug);
-        if (!course_slug.length) {
-            return res.status(404).send({ error: 'Course not found' });
-        }
-        res.status(200).send(course_slug);
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                course.getCourse(req.params.slug).then(course_slug => {
+                    if (!course_slug.length) {
+                        return res.status(404).send({ error: 'Course not found' });
+                    }
+                    memcached.set(cacheKey, JSON.stringify(course_slug), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(course_slug);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting course' });
+                });
+            }
+        });
     } catch (error) {
         res.status(500).send({ error: 'Error getting course' });
     }
 });
+
 
 app.delete('/delete/course/:slug', async (req, res) => {
     try {
@@ -159,20 +201,67 @@ app.post('/update/module', async (req, res) => {
 });
 
 app.get('/modules', async (req, res) => {
+    const cacheKey = 'modules';
+
     try {
-        const modules = await moduleTable.getAllModules();
-        res.status(200).send(modules);
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            }
+            else {
+                moduleTable.getAllModules().then(modules => {
+                    memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(modules);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting modules' });
+                });
+            }
+        });
     } catch (error) {
         res.status(500).send({ error: 'Error getting modules' });
     }
 });
 
 app.get('/module/:slug', async (req, res) => {
+    const cacheKey = `module:${req.params.slug}`;
     try {
-        const module_slug = await moduleTable.getModuleBySlug(req.params.slug);
-        if (!module_slug.length) {
-            return res.status(404).send({ error: 'Module not found' });
-        }
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            }
+            else {
+                moduleTable.getModuleBySlug(req.params.slug).then(module_slug => {
+                    if (!module_slug.length) {
+                        return res.status(404).send({ error: 'Module not found' });
+                    }
+                    memcached.set(cacheKey, JSON.stringify(module_slug), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(module_slug);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting module' });
+                });
+            }
+
+        });
         res.status(200).send(module_slug);
     } catch (error) {
         res.status(500).send({ error: 'Error getting module' });
@@ -180,12 +269,35 @@ app.get('/module/:slug', async (req, res) => {
 });
 
 app.get('/module/get/:idModule', async (req, res) => {
+    const cacheKey = `module:${req.params.idModule}`;
+
     try {
-        const module_id = await moduleTable.getModuleById(req.params.idModule);
-        if (!module_id.length) {
-            return res.status(404).send({ error: 'Module not found' });
-        }
-        res.status(200).send(module_id);
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            }
+            else {
+                moduleTable.getModuleById(req.params.idModule).then(module_id => {
+                    if (!module_id.length) {
+                        return res.status(404).send({ error: 'Module not found' });
+                    }
+                    memcached.set(cacheKey, JSON.stringify(module_id), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(module_id);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting module' });
+                });
+            }
+        });
     } catch (error) {
         res.status(500).send({ error: 'Error getting module' });
     }
@@ -193,12 +305,36 @@ app.get('/module/get/:idModule', async (req, res) => {
 
 
 app.get('/module/course/:course_id', async (req, res) => {
+
+    const cacheKey = `module:course:${req.params.course_id}`;
+
     try {
-        const module_course = await moduleTable.getModuleByCourseId(req.params.course_id);
-        if (!module_course.length) {
-            return res.status(404).send({ error: 'Module not found' });
-        }
-        res.status(200).send(module_course);
+
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                moduleTable.getModuleByCourseId(req.params.course_id).then(module_course => {
+                    if (!module_course.length) {
+                        return res.status(404).send({ error: 'Module not found' });
+                    }
+                    memcached.set(cacheKey, JSON.stringify(module_course), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(module_course);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting module' });
+                });
+            }
+        });
     } catch (error) {
         res.status(500).send({ error: 'Error getting module' });
     }
@@ -245,12 +381,70 @@ app.post('/update/chapter', async (req, res) => {
 });
 
 app.get('/chapters', async (req, res) => {
-    const chapters = await chapter.getAllChapters();
-    res.status(200).send(chapters);
+
+    const cacheKey = 'chapters';
+
+    try {
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                chapter.getAllChapters().then(chapters => {
+                    memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(chapters);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting chapters' });
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting chapters' });
+    }
 });
 
 app.get('/chapter/:id', async (req, res) => {
+
+    const cacheKey = `chapter:${req.params.id}`;
+
     try {
+
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                chapter.getChapterById(req.params.id).then(chapter_id => {
+                    if (!chapter_id.length) {
+                        return res.status(404).send({ error: 'Chapter not found' });
+                    }
+                    memcached.set(cacheKey, JSON.stringify(chapter_id), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                            res.status(500).send({ error: 'Error getting chapter' });
+                        }
+                    });
+
+                    res.status(200).send(chapter_id);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting chapter' });
+                });
+            }
+        });
+
         const chapter_id = await chapter.getChapterById(req.params.id);
         if (!chapter_id.length) {
             return res.status(404).send({ error: 'Chapter not found' });
@@ -269,4 +463,3 @@ app.delete('/delete/chapter/:id', async (req, res) => {
         res.status(500).send({ error: 'Error deleting chapter' });
     }
 });
-
