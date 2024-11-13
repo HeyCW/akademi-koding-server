@@ -5,13 +5,13 @@ Resources:
   AccountVpc:
     Type: AWS::EC2::VPC
     Properties:
-      CidrBlock: '10.0.0.0/16'
+      CidrBlock: 10.0.0.0/16
       EnableDnsSupport: true
       EnableDnsHostnames: true
       Tags:
         - Key: Name
           Value: akademi-koding-vpc
-  
+
   InternetGateway:
     Type: AWS::EC2::InternetGateway
     Properties:
@@ -29,40 +29,40 @@ Resources:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref AccountVpc
-      CidrBlock: '10.0.1.0/24'
-      AvailabilityZone: 'us-east-1a'
+      CidrBlock: 10.0.1.0/24
+      AvailabilityZone: us-east-1a
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: akademi-koding-public-subnet-1
-  
+
   PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref AccountVpc
-      CidrBlock: '10.0.2.0/24'
-      AvailabilityZone: 'us-east-1b'
+      CidrBlock: 10.0.2.0/24
+      AvailabilityZone: us-east-1b
       MapPublicIpOnLaunch: true
       Tags:
         - Key: Name
           Value: akademi-koding-public-subnet-2
-  
+
   PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref AccountVpc
-      CidrBlock: '10.0.101.0/24'
-      AvailabilityZone: 'us-east-1a'
+      CidrBlock: 10.0.101.0/24
+      AvailabilityZone: us-east-1a
       Tags:
         - Key: Name
           Value: akademi-koding-private-subnet-1
-  
+
   PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref AccountVpc
-      CidrBlock: '10.0.102.0/24'
-      AvailabilityZone: 'us-east-1b'
+      CidrBlock: 10.0.102.0/24
+      AvailabilityZone: us-east-1b
       Tags:
         - Key: Name
           Value: akademi-koding-private-subnet-2
@@ -70,7 +70,7 @@ Resources:
   NatEIP:
     Type: AWS::EC2::EIP
     Properties:
-      Domain: vpc 
+      Domain: vpc
 
   Nat:
     Type: AWS::EC2::NatGateway
@@ -88,13 +88,13 @@ Resources:
       Tags:
         - Key: Name
           Value: akademi-koding-route-table
-  
+
   PublicRoute:
     Type: AWS::EC2::Route
     DependsOn: AttachGateway
     Properties:
       RouteTableId: !Ref PublicRouteTable
-      DestinationCidrBlock: '0.0.0.0/0'
+      DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
   PrivateRouteTable:
@@ -104,12 +104,12 @@ Resources:
       Tags:
         - Key: Name
           Value: akademi-koding-private-route-table-1
-  
+
   PrivateRoute:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateRouteTable
-      DestinationCidrBlock: '0.0.0.0/0'
+      DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref Nat
 
   PublicSubnet1RouteTableAssociation:
@@ -117,7 +117,7 @@ Resources:
     Properties:
       SubnetId: !Ref PublicSubnet1
       RouteTableId: !Ref PublicRouteTable
-      
+
   PublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -129,7 +129,7 @@ Resources:
     Properties:
       SubnetId: !Ref PrivateSubnet1
       RouteTableId: !Ref PrivateRouteTable
-  
+
   PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -145,15 +145,15 @@ Resources:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
-          CidrIp: '0.0.0.0/0'
+          CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
           FromPort: '8080'
           ToPort: '8080'
-          CidrIp: '0.0.0.0/0'
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
-          CidrIp: '0.0.0.0/0'
-  
+          CidrIp: 0.0.0.0/0
+
   SecurityGroupAPI:
     Type: AWS::EC2::SecurityGroup
     Properties:
@@ -168,27 +168,25 @@ Resources:
           FromPort: '5000'
           ToPort: '5000'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
-      
-  
+
   SecurityGroupDB:
     Type: AWS::EC2::SecurityGroup
     Properties:
-      GroupDescription: Enable HTTP and SSH access
+      GroupDescription: Enable MySQL and SSH access to DB
       VpcId: !Ref AccountVpc
       SecurityGroupIngress:
         - IpProtocol: tcp
           FromPort: '22'
           ToPort: '22'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
-        -IpProtocol: tcp
+        - IpProtocol: tcp
           FromPort: '3306'
           ToPort: '3306'
           SourceSecurityGroupId: !Ref SecurityGroupAPI
-
       SecurityGroupEgress:
         - IpProtocol: -1
-          CidrIp: '0.0.0.0/0'
-  
+          CidrIp: 0.0.0.0/0
+
   SubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
     Properties:
@@ -199,7 +197,7 @@ Resources:
       Tags:
         - Key: Name
           Value: akademi-koding-rds-subnet-group
-  
+
   DBInstance:
     Type: AWS::RDS::DBInstance
     Properties:
@@ -211,65 +209,289 @@ Resources:
       MasterUserPassword: Admin12345
       DBSubnetGroupName: !Ref SubnetGroup
       DBName: akademikoding
-      PubliclyAccessible: true 
+      PubliclyAccessible: true
       StorageEncrypted: true
       VPCSecurityGroups:
-        - !Ref SecurityGroup
+        - !Ref SecurityGroupDB
       Tags:
         - Key: Name
           Value: akademi-koding-rds
 
+  LoadBalancerApp:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: akademi-koding-lb
+      Subnets:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      SecurityGroups:
+        - !Ref SecurityGroupPublic
+      Scheme: internet-facing
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+      Tags:
+        - Key: Name
+          Value: akademi-koding-lb-app
+
+  LoadBalancerServer:
+    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
+    Properties:
+      Name: akademi-koding-lb-server
+      Subnets:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      SecurityGroups:
+        - !Ref SecurityGroupAPI
+      Scheme: internal
+      LoadBalancerAttributes:
+        - Key: idle_timeout.timeout_seconds
+          Value: '60'
+      Tags:
+        - Key: Name
+          Value: akademi-koding-lb-server
+
+  EC2TemplateApp:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: akademi-koding-app
+      LaunchTemplateData:
+        ImageId: ami-063d43db0594b521b
+        InstanceType: t2.micro
+        SecurityGroupIds:
+          - !Ref SecurityGroupPublic
+        KeyName: akademi-koding
+        UserData: !Base64
+          Fn::Sub: |
+            #!/bin/bash
+            # Update the package repository
+            sudo apt update -y
+            # Switch to root
+            sudo su
+            # Install nvm
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            # Load nvm
+            . ~/.nvm/nvm.sh
+            # Install node
+            nvm install node
+            # Install git
+            sudo yum install git -y
+
+  EC2TemplateServer:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: akademi-koding-server
+      LaunchTemplateData:
+        ImageId: ami-063d43db0594b521b
+        InstanceType: t2.micro
+        SecurityGroupIds:
+          - !Ref SecurityGroupAPI
+        KeyName: akademi-koding
+        UserData: !Base64
+          Fn::Sub: |
+            #!/bin/bash
+            # Update the package repository
+            sudo apt update -y
+            # Switch to root
+            sudo su
+            # Install nvm
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
+            # Load nvm
+            . ~/.nvm/nvm.sh
+            # Install node
+            nvm install node
+            # Install git
+            sudo yum install git -y
+            # Git clone the server repository
+            git clone https://github.com/HeyCW/akademi-koding-server.git
+            # Change directory to the server repository
+            cd akademi-koding-server
+            # Install the server dependencies
+            npm install
+            # Start the server
+            npm start
+
+  TargetGroupApp:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: akademi-koding-target-group-app
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /health
+      HealthCheckPort: 8080
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 8080
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref AccountVpc
+      TargetType: instance
+      Tags:
+        - Key: Name
+          Value: akademi-koding-tg
+
+  TargetGroupServer:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      Name: akademi-koding-tg-server
+      HealthCheckIntervalSeconds: 30
+      HealthCheckPath: /health
+      HealthCheckPort: 5000
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      Port: 5000
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !Ref AccountVpc
+      TargetType: instance
+      Tags:
+        - Key: Name
+          Value: akademi-koding-tg-server
+
+  ListenerApp:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupApp
+      LoadBalancerArn: !Ref LoadBalancerApp
+      Port: 8080
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: akademi-koding-listener
+
+  ListenerServer:
+    Type: AWS::ElasticLoadBalancingV2::Listener
+    Properties:
+      DefaultActions:
+        - Type: forward
+          TargetGroupArn: !Ref TargetGroupServer
+      LoadBalancerArn: !Ref LoadBalancerServer
+      Port: 5000
+      Protocol: HTTP
+      Tags:
+        - Key: Name
+          Value: akademi-koding-listener-server
+
+  AutoScalingGroupApp:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: akademi-koding-app-asg
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EC2TemplateApp
+        Version: !GetAtt EC2TemplateApp.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PublicSubnet1
+        - !Ref PublicSubnet2
+      TargetGroupARNs:
+        - !Ref TargetGroupApp
+      Tags:
+        - Key: Name
+          Value: akademi-koding-asg
+          PropagateAtLaunch: true
   
+  AppScalingPolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroupApp
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 50.0  
+        ScaleInCooldown: 300 
+        ScaleOutCooldown: 300
+
+  AutoScalingGroupServer:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: akademi-koding-server-asg
+      LaunchTemplate:
+        LaunchTemplateId: !Ref EC2TemplateServer
+        Version: !GetAtt EC2TemplateServer.LatestVersionNumber
+      MinSize: 1
+      MaxSize: 3
+      DesiredCapacity: 2
+      VPCZoneIdentifier:
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+      TargetGroupARNs:
+        - !Ref TargetGroupServer
+      Tags:
+        - Key: Name
+          Value: akademi-koding-asg-server
+          PropagateAtLaunch: true
+
+  ServerScalePolicy:
+    Type: AWS::AutoScaling::ScalingPolicy
+    Properties:
+      AutoScalingGroupName: !Ref AutoScalingGroupServer
+      PolicyType: TargetTrackingScaling
+      TargetTrackingConfiguration:
+        PredefinedMetricSpecification:
+          PredefinedMetricType: ASGAverageCPUUtilization
+        TargetValue: 50.0
+        ScaleInCooldown: 300 
+        ScaleOutCooldown: 300
+ 
 
 Outputs:
   AccountVpcId:
     Value: !Ref AccountVpc
     Description: VPC ID of the Akademi Koding VPC
     Export:
-      Name: !Sub "${AWS::StackName}-VPCId"
+      Name: !Sub ${AWS::StackName}-VPCId
   AccountVpcCidr:
     Value: !GetAtt AccountVpc.CidrBlock
     Description: CIDR block of the Akademi Koding VPC
     Export:
-      Name: !Sub "${AWS::StackName}-VPCCidr"
+      Name: !Sub ${AWS::StackName}-VPCCidr
   PublicSubnet1Id:
     Value: !Ref PublicSubnet1
     Description: Subnet ID of the Akademi Koding Public Subnet 1
     Export:
-      Name: !Sub "${AWS::StackName}-PublicSubnet1Id"
+      Name: !Sub ${AWS::StackName}-PublicSubnet1Id
   PublicSubnet2Id:
     Value: !Ref PublicSubnet2
     Description: Subnet ID of the Akademi Koding Public Subnet 2
     Export:
-      Name: !Sub "${AWS::StackName}-PublicSubnet2Id"
+      Name: !Sub ${AWS::StackName}-PublicSubnet2Id
   PrivateSubnet1Id:
     Value: !Ref PrivateSubnet1
     Description: Subnet ID of the Akademi Koding Private Subnet 1
     Export:
-      Name: !Sub "${AWS::StackName}-PrivateSubnet1Id"
+      Name: !Sub ${AWS::StackName}-PrivateSubnet1Id
   PrivateSubnet2Id:
     Value: !Ref PrivateSubnet2
     Description: Subnet ID of the Akademi Koding Private Subnet 2
     Export:
-      Name: !Sub "${AWS::StackName}-PrivateSubnet2Id"
+      Name: !Sub ${AWS::StackName}-PrivateSubnet2Id
   RDSInstanceEndpoint:
     Value: !GetAtt DBInstance.Endpoint.Address
     Description: Endpoint of the Akademi Koding RDS instance
     Export:
-      Name: !Sub "${AWS::StackName}-RDSInstanceEndpoint"
+      Name: !Sub ${AWS::StackName}-RDSInstanceEndpoint
   RDSInstancePort:
     Value: !GetAtt DBInstance.Endpoint.Port
     Description: Port of the Akademi Koding RDS instance
     Export:
-      Name: !Sub "${AWS::StackName}-RDSInstancePort"
+      Name: !Sub ${AWS::StackName}-RDSInstancePort
   RDSInstanceUsername:
     Value: admin
     Description: Username of the Akademi Koding RDS instance
     Export:
-      Name: !Sub "${AWS::StackName}-RDSInstanceUsername"
+      Name: !Sub ${AWS::StackName}-RDSInstanceUsername
   RDSInstancePassword:
     Value: admin123
-    Description: Password of the Akademi K
+    Description: Password of the Akademi Koding
+  DBEndpoint:
+    Description: RDS MySQL Endpoint
+    Value: !GetAtt DBInstance.Endpoint.Address
 
 Metadata:
   MyMetaData:

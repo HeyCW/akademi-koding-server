@@ -6,7 +6,7 @@ const moduleTable = require('./Module');
 const chapter = require('./Chapter');
 const Memcached = require('memcached');
 
-const memcached = new Memcached('akademi-koding-ebamwh.serverless.apse2.cache.amazonaws.com:11211');
+const memcached = new Memcached('localhost:11211');
 const app = express();
 const cors = require("cors");
 const PORT = process.env.PORT || 3000;
