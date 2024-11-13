@@ -4,6 +4,9 @@ const course = require('./Course');
 const user = require('./User');
 const moduleTable = require('./Module');
 const chapter = require('./Chapter');
+const multer = require('multer');
+const path = require('path');
+const uploadFile = require('./cobas3'); // Import the S3 upload function
 const Memcached = require('memcached');
 
 const memcached = new Memcached('localhost:11211');
@@ -22,13 +25,16 @@ app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
 });
 
+const storage = multer.memoryStorage();
+const upload = multer({ storage });
+
 // const checkToken = async (req, res, next) => { 
 //     const token = req.headers.authorization;
 
 //     if (!token) {
 //         return res.status(401).send({ message: 'Token is required' });
 //     }
-    
+
 //     try {
 //         const tokenOnly = token.replace('Bearer ', '');
 //         const user = await User.findOne({ token: tokenOnly });
@@ -47,11 +53,17 @@ app.get('/', (req, res) => {
 });
 
 // CRUD course
-app.post('/add/course', async (req, res) => {
-    const { name, link, slug, description } = req.body;
+app.post('/add/course', upload.single('image'), async (req, res) => {
+    const { name, slug, description } = req.body;
+    const file = req.file;
+
     try {
-        const newcourse = await course.addCourse(name, link, slug, description);
-        res.status(201).send(newcourse);
+        // Upload image to S3 and get the URL
+        const imageUrl = await uploadFile('akademi-koding-image-bucket', file, 'course');
+
+        // Add course data, including S3 image URL, to database
+        const newCourse = await course.addCourse(name, imageUrl, slug, description);
+        res.status(201).send(newCourse);
     } catch (error) {
         res.status(500).send({ error: 'Error adding course' });
     }
@@ -70,26 +82,26 @@ app.post('/update/course', async (req, res) => {
 app.get('/courses', async (req, res) => {
     const cacheKey = 'courses';
 
-        const data = await new Promise((resolve, reject) => {
-            memcached.get(cacheKey, (err, data) => {
+    const data = await new Promise((resolve, reject) => {
+        memcached.get(cacheKey, (err, data) => {
+            if (err) return reject(err);
+            resolve(data);
+        });
+    });
+
+    if (data) {
+        return res.status(200).send(JSON.parse(data));
+    } else {
+        const courses = await course.getCourses();
+        await new Promise((resolve, reject) => {
+            memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
                 if (err) return reject(err);
-                resolve(data);
+                resolve();
             });
         });
+        return res.status(200).send(courses);
+    }
 
-        if (data) {
-            return res.status(200).send(JSON.parse(data));
-        } else {
-            const courses = await course.getCourses();
-            await new Promise((resolve, reject) => {
-                memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
-                    if (err) return reject(err);
-                    resolve();
-                });
-            });
-            return res.status(200).send(courses);
-        }
-    
 });
 
 
@@ -143,7 +155,7 @@ app.post('/add/user', async (req, res) => {
 
     try {
         const newUser = await user.addUser(username, password);
-        return res.status(201).json(newUser); 
+        return res.status(201).json(newUser);
     } catch (error) {
         if (error.error === 'Username already exists') {
             return res.status(400).json({ error: 'Username already exists' });
@@ -160,10 +172,10 @@ app.post('/login', async (req, res) => {
         if (!loginUser) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
-        res.status(200).json(loginUser); 
+        res.status(200).json(loginUser);
     } catch (error) {
         console.error('Error logging in:', error);
-        res.status(500).json({ error: 'Error logging in' }); 
+        res.status(500).json({ error: 'Error logging in' });
     }
 });
 
@@ -200,7 +212,7 @@ app.get('/modules', async (req, res) => {
             if (data) {
                 // console.log('Data from Memcached:', data);
                 return res.status(200).send(JSON.parse(data));
-            } 
+            }
             else {
                 moduleTable.getAllModules().then(modules => {
                     memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
@@ -227,7 +239,7 @@ app.get('/module/:slug', async (req, res) => {
             if (err) {
                 return res.status(500).send({ error: 'Error retrieving value from Memcached' });
             }
-            
+
             if (data) {
                 // console.log('Data from Memcached:', data);
                 return res.status(200).send(JSON.parse(data));
@@ -264,7 +276,7 @@ app.get('/module/get/:idModule', async (req, res) => {
             if (err) {
                 return res.status(500).send({ error: 'Error retrieving value from Memcached' });
             }
-            
+
             if (data) {
                 // console.log('Data from Memcached:', data);
                 return res.status(200).send(JSON.parse(data));
@@ -348,7 +360,7 @@ app.delete('/delete/module/id/:idModule', async (req, res) => {
 
 // CRUD chapter
 app.post('/add/chapter', async (req, res) => {
-    try{
+    try {
         const { module_id, name, type, content } = req.body;
         const newChapter = await chapter.addChapter(module_id, name, type, content);
         res.status(201).send(newChapter);
@@ -359,7 +371,7 @@ app.post('/add/chapter', async (req, res) => {
 });
 
 app.post('/update/chapter', async (req, res) => {
-    try{
+    try {
         const { id, name, type, content } = req.body;
         const updatedChapter = await chapter.updateChapter(id, name, type, content);
         res.status(200).send(updatedChapter);
@@ -369,7 +381,7 @@ app.post('/update/chapter', async (req, res) => {
 });
 
 app.get('/chapters', async (req, res) => {
-    
+
     const cacheKey = 'chapters';
 
     try {
