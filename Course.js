@@ -20,7 +20,8 @@ function addCourse(name, link, slug, description) {
                     console.error('Error adding course:', err);
                     return reject(err);
                 }
-                resolve({ message: 'Course added' });
+ 
+                resolve({ 'id': result.insertId, 'name': name, 'link': link, 'slug': slug, 'description': description });
             }
         );
     });

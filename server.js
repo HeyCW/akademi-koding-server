@@ -8,6 +8,7 @@ const multer = require('multer');
 const path = require('path');
 const uploadFile = require('./cobas3'); // Import the S3 upload function
 const Memcached = require('memcached');
+const jwt = require('jsonwebtoken');
 
 const memcached = new Memcached('localhost:11211');
 const app = express();
@@ -28,58 +29,75 @@ app.listen(PORT, () => {
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-// const checkToken = async (req, res, next) => { 
-//     const token = req.headers.authorization;
+const checkToken = async (req, res, next) => { 
+    const token = req.headers.authorization;
 
-//     if (!token) {
-//         return res.status(401).send({ message: 'Token is required' });
-//     }
+    if (!token) {
+        return res.status(401).send({ message: 'Token is required' });
+    }
 
-//     try {
-//         const tokenOnly = token.replace('Bearer ', '');
-//         const user = await User.findOne({ token: tokenOnly });
-//         if (!user) {
-//             return res.status(403).send({ message: 'Invalid token' });
-//         }
-//         next();
-//     } catch (error) {
-//         console.log(error);
-//         return res.status(403).send({ message: 'Invalid token' });
-//     }
-// };
+    try {
+        const tokenOnly = token.replace('Bearer ', '');
+        const decoded = jwt.verify(tokenOnly, process.env.JWT_SECRET);
+        next();
+    } catch (error) {
+        console.log(error);
+        return res.status(403).send({ message: 'Invalid token' });
+    }
+};
 
-app.get('/', (req, res) => {
+app.get('/', checkToken, (req, res) => {
     res.send('Hello World');
 });
 
 // CRUD course
 app.post('/add/course', upload.single('image'), async (req, res) => {
-    const { name, slug, description } = req.body;
-    const file = req.file;
+    const { name, slug, link, description } = req.body;
+    const cacheKey = 'courses';
 
     try {
-        // Upload image to S3 and get the URL
-        const imageUrl = await uploadFile('akademi-koding-image-bucket', file, 'course');
+        // Add course data to the database
+        const newCourse = await course.addCourse(name, link, slug, description);
+        const courses = await course.getCourses();
+        memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
+            if (err) {
+                console.error('Error setting value in Memcached:', err);
+            }
+        });
 
-        // Add course data, including S3 image URL, to database
-        const newCourse = await course.addCourse(name, imageUrl, slug, description);
         res.status(201).send(newCourse);
+
     } catch (error) {
+        console.error('Error adding course:', error);
         res.status(500).send({ error: 'Error adding course' });
     }
 });
 
+
 app.post('/update/course', async (req, res) => {
     const { id, name, link, slug, description } = req.body;
-    try {
+    const cacheKey = 'courses';
+
+     try {
         const updatedCourse = await course.updateCourse(id, name, link, slug, description);
+        
+        const courses = await course.getCourses();
+        
+        memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
+            if (err) {
+                console.error('Error updating value in Memcached:', err);
+            }
+        });
+
         res.status(200).send(updatedCourse);
+
     } catch (error) {
+        console.error('Error updating course:', error);
         res.status(500).send({ error: 'Error updating course' });
     }
 });
 
-app.get('/courses', async (req, res) => {
+app.get('/courses', checkToken, async (req, res) => {
     const cacheKey = 'courses';
 
     const data = await new Promise((resolve, reject) => {
@@ -172,6 +190,7 @@ app.post('/login', async (req, res) => {
         if (!loginUser) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
+
         res.status(200).json(loginUser);
     } catch (error) {
         console.error('Error logging in:', error);

@@ -28,7 +28,7 @@ function addUser(username, password) {
             expiresIn: '2h'
         });
 
-        const encryptedPassword = encryptPassword(password, process.env.CRYPTO_SECRET);
+        const encryptedPassword = encryptPassword(password);
 
         connection.query(
             `INSERT INTO users (username, password, token) VALUES (?, ?, ?)`, 
@@ -69,7 +69,12 @@ function loginUser(username, password) {
                 if (password !== decryptedPassword) {
                     return resolve(null);
                 }
-                return resolve(user);
+
+                const token = jwt.sign({ username }, process.env.JWT_SECRET, {
+                    expiresIn: '2h'
+                });
+
+                return resolve(token);
             }
         );
     });
