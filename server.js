@@ -201,23 +201,51 @@ app.post('/login', async (req, res) => {
 // CRUD module
 app.post('/add/module', async (req, res) => {
     const { course_id, name, link, slug, description, project } = req.body;
+    const cacheKey = `module:course:${course_id}`;
+    console.log('cacheKey:', cacheKey);
+
     try {
         const newModule = await moduleTable.addModule(course_id, name, link, slug, description, project);
+        const modules = await moduleTable.getModuleByCourseId(course_id);
+
+        memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+            if (err) {
+                console.error('Error updating cache in Memcached:', err);
+            }
+        });
+
         res.status(201).send(newModule);
+
     } catch (error) {
+        console.error('Error adding module:', error);
         res.status(500).send({ error: 'Error adding module' });
     }
 });
 
 app.post('/update/module', async (req, res) => {
-    const { id, name, link, slug, description, project } = req.body;
+    const { id, courseId, name, link, slug, description, project } = req.body;
+    const cacheKey = `module:course:${courseId}`; 
+
     try {
+        
         const updatedModule = await moduleTable.updateModule(id, name, link, slug, description, project);
+        const modules = await moduleTable.getModuleByCourseId(courseId);
+        
+        memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+            if (err) {
+                console.error('Error updating module cache in Memcached:', err);
+            }
+        });
+
         res.status(200).send(updatedModule);
+
     } catch (error) {
+        console.error('Error updating module:', error);
         res.status(500).send({ error: 'Error updating module' });
     }
 });
+
+
 
 app.get('/modules', async (req, res) => {
     const cacheKey = 'modules';
@@ -326,6 +354,7 @@ app.get('/module/get/:idModule', async (req, res) => {
 app.get('/module/course/:course_id', async (req, res) => {
 
     const cacheKey = `module:course:${req.params.course_id}`;
+    console.log('cacheKey:', cacheKey);
 
     try {
 
