@@ -511,3 +511,13 @@ app.delete('/delete/chapter/:id', async (req, res) => {
         res.status(500).send({ error: 'Error deleting chapter' });
     }
 });
+
+app.get('/modules/slug/:slug', async (req, res) => {
+    const slug = req.params.slug;  // Mengambil parameter slug dari URL
+    try {
+        const module = await moduleModel.getModuleBySlug(slug);  // Mengambil module berdasarkan slug
+        res.status(200).send(module);
+    } catch (error) {
+        res.status(500).send({ error: 'Failed to fetch module' });
+    }
+});
