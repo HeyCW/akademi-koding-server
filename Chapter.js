@@ -87,6 +87,24 @@ function removeChapterById(id) {
     });
 }
 
-module.exports = { addChapter, updateChapter, getAllChapters, getChapterById, removeChapterById };
+function getChaptersByModuleId(moduleId) {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `SELECT * FROM chapters WHERE module_id = ?`,
+            [moduleId],
+            (err, result) => {
+                if (err) {
+                    console.error('Error getting chapters by module ID:', err);
+                    return reject(err);
+                }
+                resolve(result);
+            }
+        );
+    });
+}
+
+
+
+module.exports = { addChapter, updateChapter, getAllChapters, getChapterById, removeChapterById, getChaptersByModuleId };
 
 
