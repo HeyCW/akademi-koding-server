@@ -147,8 +147,8 @@ Resources:
           ToPort: '22'
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '8080'
-          ToPort: '8080'
+          FromPort: '5173'
+          ToPort: '5173'
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
@@ -264,18 +264,33 @@ Resources:
         UserData: !Base64
           Fn::Sub: |
             #!/bin/bash
+
             # Update the package repository
-            sudo apt update -y
+            sudo yum update -y
+
             # Switch to root
             sudo su
-            # Install nvm
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-            # Load nvm
-            . ~/.nvm/nvm.sh
+            
             # Install node
-            nvm install node
+            sudo yum install nodejs npm -y
+
             # Install git
             sudo yum install git -y
+
+            # Git clone the app repository
+            git clone https://github.com/nicholasf09/akademi-koding.git
+
+            # Change directory to the app repository
+            cd akademi-koding
+
+            # Install the app dependencies
+            npm install
+
+            # Export the environment variables
+            export API_ENDPOINT=${LoadBalancerServer.DNSName}
+
+            # Start the app
+            npm run dev
 
   EC2TemplateServer:
     Type: AWS::EC2::LaunchTemplate
@@ -291,23 +306,29 @@ Resources:
           Fn::Sub: |
             #!/bin/bash
             # Update the package repository
-            sudo apt update -y
+            sudo yum update -y
+
             # Switch to root
             sudo su
-            # Install nvm
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-            # Load nvm
-            . ~/.nvm/nvm.sh
+
             # Install node
-            nvm install node
+            sudo yum install nodejs npm -y
+           
             # Install git
             sudo yum install git -y
+
             # Git clone the server repository
             git clone https://github.com/HeyCW/akademi-koding-server.git
+
             # Change directory to the server repository
             cd akademi-koding-server
+
             # Install the server dependencies
             npm install
+
+            # Export the DB
+            export DB_ENDPOINT=${DBInstance.Endpoint.Address}
+
             # Start the server
             npm start
 
@@ -317,11 +338,11 @@ Resources:
       Name: akademi-koding-target-group-app
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: /health
-      HealthCheckPort: 8080
+      HealthCheckPort: 5173
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      Port: 8080
+      Port: 5173
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref AccountVpc
@@ -356,7 +377,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupApp
       LoadBalancerArn: !Ref LoadBalancerApp
-      Port: 8080
+      Port: 5173
       Protocol: HTTP
       Tags:
         - Key: Name
@@ -403,9 +424,8 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 50.0  
-        ScaleInCooldown: 300 
-        ScaleOutCooldown: 300
+        TargetValue: 50.0
+      EstimatedInstanceWarmup: 300
 
   AutoScalingGroupServer:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -436,8 +456,7 @@ Resources:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 50.0
-        ScaleInCooldown: 300 
-        ScaleOutCooldown: 300
+      EstimatedInstanceWarmup: 300
  
 
 Outputs:
