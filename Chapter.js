@@ -103,6 +103,6 @@ function removeChapterById(id) {
     });
 }
 
-module.exports = { addChapter, updateChapter, getAllChapters, getChapterById, removeChapterById };
+module.exports = { addChapter, updateChapter, getAllChapters, getChapterById, removeChapterById, getChapterByModuleId };
 
 
