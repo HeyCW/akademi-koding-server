@@ -165,8 +165,8 @@ Resources:
           ToPort: '22'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
         - IpProtocol: tcp
-          FromPort: '5000'
-          ToPort: '5000'
+          FromPort: '3000'
+          ToPort: '3000'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
 
   SecurityGroupDB:
@@ -357,11 +357,11 @@ Resources:
       Name: akademi-koding-tg-server
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: /health
-      HealthCheckPort: 5000
+      HealthCheckPort: 3000
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      Port: 5000
+      Port: 3000
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref AccountVpc
@@ -390,7 +390,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupServer
       LoadBalancerArn: !Ref LoadBalancerServer
-      Port: 5000
+      Port: 3000
       Protocol: HTTP
       Tags:
         - Key: Name
