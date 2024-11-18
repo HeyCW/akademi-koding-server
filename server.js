@@ -101,7 +101,7 @@ app.post('/update/course', async (req, res) => {
     }
 });
 
-app.get('/courses', checkToken, async (req, res) => {
+app.get('/courses', async (req, res) => {
     const cacheKey = 'courses';
 
     const data = await new Promise((resolve, reject) => {
@@ -560,3 +560,22 @@ app.delete('/delete/chapter/:id', async (req, res) => {
         res.status(500).send({ error: 'Error deleting chapter' });
     }
 });
+
+app.get('/modules/:moduleId/chapters', async (req, res) => {
+    const { moduleId } = req.params;
+
+    try {
+        const chapters = await chapter.getChaptersByModuleId(moduleId);
+
+        if (!chapters || chapters.length === 0) {
+            return res.status(404).send({ message: 'No chapters found for this module.' });
+        }
+
+        return res.status(200).send(chapters);
+    } catch (error) {
+        console.error('Error fetching chapters by module:', error.message);
+        return res.status(500).send({ message: 'Internal Server Error', error: error.message });
+    }
+});
+
+
