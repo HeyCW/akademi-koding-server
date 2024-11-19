@@ -147,8 +147,8 @@ Resources:
           ToPort: '22'
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '5173'
-          ToPort: '5173'
+          FromPort: '80'
+          ToPort: '80'
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
@@ -186,6 +186,41 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+
+  SecurityGroupElasticCache:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: "Security group for ElastiCache Memcached"
+      VpcId: !Ref AccountVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 11211
+          ToPort: 11211
+          SourceSecurityGroupId: !Ref SecurityGroupAPI
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp:
+
+  ElastiCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: "Subnet group for ElastiCache Memcached"
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+  
+  ElastiCacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      CacheNodeType: cache.t3.micro
+      Engine: memcached
+      NumCacheNodes: 2
+      CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref SecurityGroupElasticCache
+      Tags:
+        - Key: Name
+          Value: akademi-koding-elasticache
 
   SubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -267,9 +302,6 @@ Resources:
 
             # Update the package repository
             sudo yum update -y
-
-            # Switch to root
-            sudo su
             
             # Install node
             sudo yum install nodejs npm -y
@@ -286,11 +318,14 @@ Resources:
             # Install the app dependencies
             npm install
 
-            # Export the environment variables
-            export API_ENDPOINT=${LoadBalancerServer.DNSName}
+            # Persist the API endpoint in the environment file
+            echo "VITE_API_ENDPOINT=${LoadBalancerServer.DNSName}" | sudo tee -a /etc/environment
+
+            # Source the environment file to load it into the current shell session
+            source /etc/environment
 
             # Start the app
-            npm run dev
+            npm run dev -- --host
 
   EC2TemplateServer:
     Type: AWS::EC2::LaunchTemplate
@@ -308,9 +343,6 @@ Resources:
             # Update the package repository
             sudo yum update -y
 
-            # Switch to root
-            sudo su
-
             # Install node
             sudo yum install nodejs npm -y
            
@@ -326,8 +358,12 @@ Resources:
             # Install the server dependencies
             npm install
 
-            # Export the DB
-            export DB_ENDPOINT=${DBInstance.Endpoint.Address}
+            # Persist the DB endpoint in the environment file
+            echo "DB_ENDPOINT=${DBInstance.Endpoint.Address}" | sudo tee -a /etc/environment
+            echo "ELASTICACHE_ENDPOINT=123" | sudo tee -a /etc/environment
+
+            # Source the environment file to load DB_ENDPOINT
+            source /etc/environment
 
             # Start the server
             npm start
@@ -377,7 +413,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupApp
       LoadBalancerArn: !Ref LoadBalancerApp
-      Port: 5173
+      Port: 80
       Protocol: HTTP
       Tags:
         - Key: Name
