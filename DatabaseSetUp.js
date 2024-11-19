@@ -132,7 +132,7 @@ function createTable() {
         user_id INT NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users(id),
         link TEXT NOT NULL,
-        coment TEXT,
+        comment TEXT,
         score INT
     );
     `;
