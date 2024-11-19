@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const database = require('./DatabaseSetUp');
 const course = require('./Course');
@@ -10,7 +11,7 @@ const uploadFile = require('./cobas3'); // Import the S3 upload function
 const Memcached = require('memcached');
 const jwt = require('jsonwebtoken');
 
-const memcached = new Memcached('localhost:11211');
+const memcached = new Memcached(process.env.elasticacheendpoint || 'localhost:11211');
 const app = express();
 const cors = require("cors");
 const PORT = process.env.PORT || 3000;
@@ -48,6 +49,10 @@ const checkToken = async (req, res, next) => {
 
 app.get('/', checkToken, (req, res) => {
     res.send('Hello World');
+});
+
+app.get('/health', (req, res) => {
+    res.send('OK');
 });
 
 // CRUD course
@@ -408,14 +413,25 @@ app.delete('/delete/module/id/:idModule', async (req, res) => {
 
 // CRUD chapter
 app.post('/add/chapter', async (req, res) => {
+    const { module_id, name, type, content } = req.body;
+    const cacheKey = `chapters:module:${module_id}`; 
+
     try {
-        const { module_id, name, type, content } = req.body;
         const newChapter = await chapter.addChapter(module_id, name, type, content);
+        const chapters = await chapter.getChaptersByModuleId(module_id);
+
+        memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+            if (err) {
+                console.error('Error updating chapter cache in Memcached:', err);
+            }
+        });
+
         res.status(201).send(newChapter);
+
     } catch (error) {
+        console.error('Error adding chapter:', error);
         res.status(500).send({ error: 'Error adding chapter' });
     }
-
 });
 
 app.post('/update/chapter', async (req, res) => {
@@ -502,6 +518,40 @@ app.get('/chapter/:id', async (req, res) => {
         res.status(500).send({ error: 'Error getting chapter' });
     }
 });
+
+app.get('/modules/:module_id/chapters', async (req, res) => {
+
+    const cacheKey = `chapters:module:${req.params.module_id}`;
+
+    try {
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                chapter.getChapterByModuleId(req.params.module_id).then(chapters => {
+                    memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(chapters);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting chapters' });
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting chapters' });
+    }
+
+}); 
+
 
 app.delete('/delete/chapter/:id', async (req, res) => {
     try {

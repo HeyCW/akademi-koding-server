@@ -71,6 +71,22 @@ function getChapterById(id) {
     });
 }
 
+function getChapterByModuleId(module_id) {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `SELECT * FROM chapters WHERE module_id = ?`,
+            [module_id],
+            (err, result) => {
+                if (err) {
+                    console.error('Error getting chapter:', err);
+                    return reject(err);
+                }
+                resolve(result);
+            }
+        );
+    });
+}
+
 function removeChapterById(id) {
     return new Promise((resolve, reject) => {
         connection.query(
@@ -87,24 +103,6 @@ function removeChapterById(id) {
     });
 }
 
-function getChaptersByModuleId(moduleId) {
-    return new Promise((resolve, reject) => {
-        connection.query(
-            `SELECT * FROM chapters WHERE module_id = ?`,
-            [moduleId],
-            (err, result) => {
-                if (err) {
-                    console.error('Error getting chapters by module ID:', err);
-                    return reject(err);
-                }
-                resolve(result);
-            }
-        );
-    });
-}
-
-
-
-module.exports = { addChapter, updateChapter, getAllChapters, getChapterById, removeChapterById, getChaptersByModuleId };
+module.exports = { addChapter, updateChapter, getAllChapters, getChapterById, removeChapterById, getChapterByModuleId };
 
 

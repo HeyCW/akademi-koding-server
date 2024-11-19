@@ -1,7 +1,7 @@
 const connection = require('./Connection');
 const jwt = require('jsonwebtoken');
 const CryptoJS = require('crypto-js');
-require('dotenv').config();
+
 
 connection.connect(err => {
     if (err) {
