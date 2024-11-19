@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const database = require('./DatabaseSetUp');
 const course = require('./Course');
@@ -10,7 +11,7 @@ const uploadFile = require('./cobas3'); // Import the S3 upload function
 const Memcached = require('memcached');
 const jwt = require('jsonwebtoken');
 
-const memcached = new Memcached('localhost:11211');
+const memcached = new Memcached(process.env.elasticacheendpoint || 'localhost:11211');
 const app = express();
 const cors = require("cors");
 const PORT = process.env.PORT || 3000;

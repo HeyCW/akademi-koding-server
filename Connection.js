@@ -1,10 +1,9 @@
 const mysql = require('mysql2');
-const createDatabase = 'CREATE DATABASE IF NOT EXISTS `akademi-koding`';
 
 let connection = mysql.createConnection({
-    host: 'localhost',
-    user: 'root',
-    password: '',
+    host: process.env.DB_ENDPOINT || 'localhost',
+    user: process.env.DB_USERNAME,
+    password: process.env.DB_PASSWORD,
     database: 'akademi-koding',
 });
 

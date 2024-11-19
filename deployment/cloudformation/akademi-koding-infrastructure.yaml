@@ -199,7 +199,7 @@ Resources:
           SourceSecurityGroupId: !Ref SecurityGroupAPI
       SecurityGroupEgress:
         - IpProtocol: -1
-          CidrIp:
+          CidrIp: 0.0.0.0/0
 
   ElastiCacheSubnetGroup:
     Type: AWS::ElastiCache::SubnetGroup
@@ -216,7 +216,7 @@ Resources:
       Engine: memcached
       NumCacheNodes: 2
       CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
-      SecurityGroupIds:
+      VpcSecurityGroupIds:
         - !Ref SecurityGroupElasticCache
       Tags:
         - Key: Name
@@ -310,13 +310,13 @@ Resources:
             sudo yum install git -y
 
             # Git clone the app repository
-            git clone https://github.com/nicholasf09/akademi-koding.git
+            git clone https://github.com/nicholasf09/akademi-koding.git /home/ec2-user/akademi-koding
 
             # Change directory to the app repository
             cd akademi-koding
 
             # Install the app dependencies
-            npm install
+            sudo npm install
 
             # Persist the API endpoint in the environment file
             echo "VITE_API_ENDPOINT=${LoadBalancerServer.DNSName}" | sudo tee -a /etc/environment
@@ -325,7 +325,7 @@ Resources:
             source /etc/environment
 
             # Start the app
-            npm run dev -- --host
+            sudo npm run dev -- --host
 
   EC2TemplateServer:
     Type: AWS::EC2::LaunchTemplate
@@ -350,23 +350,29 @@ Resources:
             sudo yum install git -y
 
             # Git clone the server repository
-            git clone https://github.com/HeyCW/akademi-koding-server.git
+            git clone https://github.com/HeyCW/akademi-koding-server.git /home/ec2-user/akademi-koding-server
 
             # Change directory to the server repository
             cd akademi-koding-server
 
             # Install the server dependencies
-            npm install
+            sudo npm install
+            
+            node CreateDB.js
 
             # Persist the DB endpoint in the environment file
             echo "DB_ENDPOINT=${DBInstance.Endpoint.Address}" | sudo tee -a /etc/environment
-            echo "ELASTICACHE_ENDPOINT=123" | sudo tee -a /etc/environment
+            echo "ELASTICCACHE_ENDPOINT=123" | sudo tee -a /etc/environment
+            echo "DB_USERNAME=Admin123" | sudo tee -a /etc/environment
+            echo "DB_PASSWORD=Admin12345" | sudo tee -a /etc/environment
+            echo "JWT_SECRET=7xLw9QpM3BnVc2K" | sudo tee -a /etc/environment
+            echo "CRYPTO_SECRET=Zk3Qm9XvTyW7pLn" | sudo tee -a /etc/environment
 
             # Source the environment file to load DB_ENDPOINT
             source /etc/environment
 
             # Start the server
-            npm start
+            sudo npm start
 
   TargetGroupApp:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
