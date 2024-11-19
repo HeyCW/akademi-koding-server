@@ -147,8 +147,8 @@ Resources:
           ToPort: '22'
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '8080'
-          ToPort: '8080'
+          FromPort: '80'
+          ToPort: '80'
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
@@ -165,8 +165,8 @@ Resources:
           ToPort: '22'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
         - IpProtocol: tcp
-          FromPort: '5000'
-          ToPort: '5000'
+          FromPort: '3000'
+          ToPort: '3000'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
 
   SecurityGroupDB:
@@ -186,6 +186,41 @@ Resources:
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
+
+  SecurityGroupElasticCache:
+    Type: AWS::EC2::SecurityGroup
+    Properties: 
+      GroupDescription: "Security group for ElastiCache Memcached"
+      VpcId: !Ref AccountVpc
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 11211
+          ToPort: 11211
+          SourceSecurityGroupId: !Ref SecurityGroupAPI
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp:
+
+  ElastiCacheSubnetGroup:
+    Type: AWS::ElastiCache::SubnetGroup
+    Properties:
+      Description: "Subnet group for ElastiCache Memcached"
+      SubnetIds: 
+        - !Ref PrivateSubnet1
+        - !Ref PrivateSubnet2
+  
+  ElastiCacheCluster:
+    Type: AWS::ElastiCache::CacheCluster
+    Properties:
+      CacheNodeType: cache.t3.micro
+      Engine: memcached
+      NumCacheNodes: 2
+      CacheSubnetGroupName: !Ref ElastiCacheSubnetGroup
+      SecurityGroupIds:
+        - !Ref SecurityGroupElasticCache
+      Tags:
+        - Key: Name
+          Value: akademi-koding-elasticache
 
   SubnetGroup:
     Type: AWS::RDS::DBSubnetGroup
@@ -264,18 +299,33 @@ Resources:
         UserData: !Base64
           Fn::Sub: |
             #!/bin/bash
+
             # Update the package repository
-            sudo apt update -y
-            # Switch to root
-            sudo su
-            # Install nvm
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-            # Load nvm
-            . ~/.nvm/nvm.sh
+            sudo yum update -y
+            
             # Install node
-            nvm install node
+            sudo yum install nodejs npm -y
+
             # Install git
             sudo yum install git -y
+
+            # Git clone the app repository
+            git clone https://github.com/nicholasf09/akademi-koding.git
+
+            # Change directory to the app repository
+            cd akademi-koding
+
+            # Install the app dependencies
+            npm install
+
+            # Persist the API endpoint in the environment file
+            echo "VITE_API_ENDPOINT=${LoadBalancerServer.DNSName}" | sudo tee -a /etc/environment
+
+            # Source the environment file to load it into the current shell session
+            source /etc/environment
+
+            # Start the app
+            npm run dev -- --host
 
   EC2TemplateServer:
     Type: AWS::EC2::LaunchTemplate
@@ -291,23 +341,30 @@ Resources:
           Fn::Sub: |
             #!/bin/bash
             # Update the package repository
-            sudo apt update -y
-            # Switch to root
-            sudo su
-            # Install nvm
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.3/install.sh | bash
-            # Load nvm
-            . ~/.nvm/nvm.sh
+            sudo yum update -y
+
             # Install node
-            nvm install node
+            sudo yum install nodejs npm -y
+           
             # Install git
             sudo yum install git -y
+
             # Git clone the server repository
             git clone https://github.com/HeyCW/akademi-koding-server.git
+
             # Change directory to the server repository
             cd akademi-koding-server
+
             # Install the server dependencies
             npm install
+
+            # Persist the DB endpoint in the environment file
+            echo "DB_ENDPOINT=${DBInstance.Endpoint.Address}" | sudo tee -a /etc/environment
+            echo "ELASTICACHE_ENDPOINT=123" | sudo tee -a /etc/environment
+
+            # Source the environment file to load DB_ENDPOINT
+            source /etc/environment
+
             # Start the server
             npm start
 
@@ -317,11 +374,11 @@ Resources:
       Name: akademi-koding-target-group-app
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: /health
-      HealthCheckPort: 8080
+      HealthCheckPort: 5173
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      Port: 8080
+      Port: 5173
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref AccountVpc
@@ -336,11 +393,11 @@ Resources:
       Name: akademi-koding-tg-server
       HealthCheckIntervalSeconds: 30
       HealthCheckPath: /health
-      HealthCheckPort: 5000
+      HealthCheckPort: 3000
       HealthCheckProtocol: HTTP
       HealthCheckTimeoutSeconds: 5
       HealthyThresholdCount: 2
-      Port: 5000
+      Port: 3000
       Protocol: HTTP
       UnhealthyThresholdCount: 2
       VpcId: !Ref AccountVpc
@@ -356,7 +413,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupApp
       LoadBalancerArn: !Ref LoadBalancerApp
-      Port: 8080
+      Port: 80
       Protocol: HTTP
       Tags:
         - Key: Name
@@ -369,7 +426,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupServer
       LoadBalancerArn: !Ref LoadBalancerServer
-      Port: 5000
+      Port: 3000
       Protocol: HTTP
       Tags:
         - Key: Name
@@ -403,9 +460,8 @@ Resources:
       TargetTrackingConfiguration:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
-        TargetValue: 50.0  
-        ScaleInCooldown: 300 
-        ScaleOutCooldown: 300
+        TargetValue: 50.0
+      EstimatedInstanceWarmup: 300
 
   AutoScalingGroupServer:
     Type: AWS::AutoScaling::AutoScalingGroup
@@ -436,8 +492,7 @@ Resources:
         PredefinedMetricSpecification:
           PredefinedMetricType: ASGAverageCPUUtilization
         TargetValue: 50.0
-        ScaleInCooldown: 300 
-        ScaleOutCooldown: 300
+      EstimatedInstanceWarmup: 300
  
 
 Outputs:

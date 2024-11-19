@@ -50,6 +50,10 @@ app.get('/', checkToken, (req, res) => {
     res.send('Hello World');
 });
 
+app.get('/health', (req, res) => {
+    res.send('OK');
+});
+
 // CRUD course
 app.post('/add/course', upload.single('image'), async (req, res) => {
     const { name, slug, link, description } = req.body;
@@ -97,7 +101,7 @@ app.post('/update/course', async (req, res) => {
     }
 });
 
-app.get('/courses', checkToken, async (req, res) => {
+app.get('/courses', async (req, res) => {
     const cacheKey = 'courses';
 
     const data = await new Promise((resolve, reject) => {
@@ -408,14 +412,25 @@ app.delete('/delete/module/id/:idModule', async (req, res) => {
 
 // CRUD chapter
 app.post('/add/chapter', async (req, res) => {
+    const { module_id, name, type, content } = req.body;
+    const cacheKey = `chapters:module:${module_id}`; 
+
     try {
-        const { module_id, name, type, content } = req.body;
         const newChapter = await chapter.addChapter(module_id, name, type, content);
+        const chapters = await chapter.getChaptersByModuleId(module_id);
+
+        memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+            if (err) {
+                console.error('Error updating chapter cache in Memcached:', err);
+            }
+        });
+
         res.status(201).send(newChapter);
+
     } catch (error) {
+        console.error('Error adding chapter:', error);
         res.status(500).send({ error: 'Error adding chapter' });
     }
-
 });
 
 app.post('/update/chapter', async (req, res) => {
@@ -503,6 +518,40 @@ app.get('/chapter/:id', async (req, res) => {
     }
 });
 
+app.get('/modules/:module_id/chapters', async (req, res) => {
+
+    const cacheKey = `chapters:module:${req.params.module_id}`;
+
+    try {
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
+
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                chapter.getChapterByModuleId(req.params.module_id).then(chapters => {
+                    memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
+
+                    res.status(200).send(chapters);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting chapters' });
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting chapters' });
+    }
+
+}); 
+
+
 app.delete('/delete/chapter/:id', async (req, res) => {
     try {
         const delete_chapter = await chapter.removeChapterById(req.params.id);
@@ -511,3 +560,22 @@ app.delete('/delete/chapter/:id', async (req, res) => {
         res.status(500).send({ error: 'Error deleting chapter' });
     }
 });
+
+app.get('/modules/:moduleId/chapters', async (req, res) => {
+    const { moduleId } = req.params;
+
+    try {
+        const chapters = await chapter.getChaptersByModuleId(moduleId);
+
+        if (!chapters || chapters.length === 0) {
+            return res.status(404).send({ message: 'No chapters found for this module.' });
+        }
+
+        return res.status(200).send(chapters);
+    } catch (error) {
+        console.error('Error fetching chapters by module:', error.message);
+        return res.status(500).send({ message: 'Internal Server Error', error: error.message });
+    }
+});
+
+
