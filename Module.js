@@ -135,4 +135,24 @@ function removeModuleById(idModule) {
     });
 }
 
-module.exports = { addModule, updateModule, getAllModules, getModuleBySlug, getModuleById, getModuleByCourseId, removeModule, removeModuleById };
+function getProjectByModuleId(slugModule) {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `SELECT project FROM modules WHERE slug = ?`,
+            [slugModule],
+            (err, result) => {
+                if (err) {
+                    console.error('Error getting projects:', err);
+                    return reject(err);
+                }
+                if (result.length > 0) {
+                    resolve(result[0].project);
+                } else {
+                    resolve(null);
+                }
+            }
+        );
+    });
+}
+
+module.exports = { addModule, updateModule, getAllModules, getModuleBySlug, getModuleById, getModuleByCourseId, removeModule, removeModuleById, getProjectByModuleId };

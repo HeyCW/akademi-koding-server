@@ -579,4 +579,21 @@ app.get('/modules/:moduleId/chapters', async (req, res) => {
     }
 });
 
+    app.get('/module/:moduleId/projects', async (req, res) => {
+        const { moduleId } = req.params;
+
+        try {
+            const projects = await moduleTable.getProjectByModuleId(moduleId);
+
+            if (!projects || projects.length === 0) {
+                return res.status(404).send({ message: 'No projects found for this module.' });
+            }
+
+            return res.status(200).send(projects);
+        } catch (error) {
+            console.error('Error fetching projects by module:', error.message);
+            return res.status(500).send({ message: 'Internal Server Error', error: error.message });
+        }
+    });
+
 
