@@ -11,7 +11,7 @@ const uploadFile = require('./cobas3'); // Import the S3 upload function
 const Memcached = require('memcached');
 const jwt = require('jsonwebtoken');
 
-const memcached = new Memcached(process.env.elasticacheendpoint || 'localhost:11211');
+const memcached = new Memcached(process.env.ELASTICACHE_ENDPOINT || 'localhost:11211');
 const app = express();
 const cors = require("cors");
 const PORT = process.env.PORT || 3000;
@@ -189,9 +189,11 @@ app.post('/add/user', async (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
-
+    console.log('username:', username);
+    console.log('password', password);
     try {
         const loginUser = await user.loginUser(username, password);
+        
         if (!loginUser) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }

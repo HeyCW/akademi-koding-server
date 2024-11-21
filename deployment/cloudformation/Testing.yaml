@@ -1,0 +1,35 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS infrastructure setup for Akademi Koding
+
+Resources:
+  EC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: ami-063d43db0594b521b
+      InstanceType: t2.micro
+      KeyName: akademi-koding
+      UserData: 
+        Fn::Base64: 
+          !Sub |
+            #!/bin/bash
+
+            # Update the package repository
+            sudo yum update -y
+            
+            # Install node
+            sudo yum install nodejs npm -y
+
+            # Install git
+            sudo yum install git -y
+
+            # Git clone the app repository
+            git clone https://github.com/nicholasf09/akademi-koding.git /home/ec2-user/akademi-koding
+
+            # Change directory to the app repository
+            cd /home/ec2-user/akademi-koding
+
+            # Install the app dependencies
+            sudo npm install
+
+            # Start the app
+            sudo npm run dev -- --host

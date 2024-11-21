@@ -150,6 +150,10 @@ Resources:
           FromPort: '80'
           ToPort: '80'
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '5137'
+          ToPort: '5137'
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
@@ -313,7 +317,7 @@ Resources:
             git clone https://github.com/nicholasf09/akademi-koding.git /home/ec2-user/akademi-koding
 
             # Change directory to the app repository
-            cd akademi-koding
+            cd /home/ec2-user/akademi-koding
 
             # Install the app dependencies
             sudo npm install
@@ -353,7 +357,7 @@ Resources:
             git clone https://github.com/HeyCW/akademi-koding-server.git /home/ec2-user/akademi-koding-server
 
             # Change directory to the server repository
-            cd akademi-koding-server
+            cd /home/ec2-user/akademi-koding-server
 
             # Install the server dependencies
             sudo npm install

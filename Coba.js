@@ -38,7 +38,7 @@ const lambdaUrl = 'https://fcdqfbrasbikltxrzzr7w2cjmu0uxvdg.lambda-url.us-east-1
 //     const uploadParams = {
 //         Bucket: bucketName,
 //         Key: `${folderPath}${fileName}`,
-//         Body: fs.createReadStream(filePath),
+//    Console.log("");     Body: fs.createReadStream(filePath),
 //     };
 
 //     try {
