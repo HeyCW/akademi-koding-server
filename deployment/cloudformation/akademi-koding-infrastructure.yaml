@@ -171,11 +171,10 @@ Resources:
         - IpProtocol: tcp
           FromPort: '3000'
           ToPort: '3000'
-          SourceSecurityGroupId: !Ref SecurityGroupAPI
-        - IpProtocol: tcp
-          FromPort: '3000'
-          ToPort: '3000'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
+      SecurityGroupEgress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
 
   SecurityGroupDB:
     Type: AWS::EC2::SecurityGroup
@@ -424,7 +423,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupServer
       LoadBalancerArn: !Ref LoadBalancerApp
-      Port: 3000
+      Port: 80
       Protocol: HTTP
       Tags:
         - Key: Name
