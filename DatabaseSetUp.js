@@ -84,46 +84,6 @@ function createTable() {
         console.log('Chapter Table created');
     });
 
-    const createQuizTable = `
-    CREATE TABLE IF NOT EXISTS quizzes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        chapter_id INT NOT NULL,
-        FOREIGN KEY (chapter_id) REFERENCES chapters(id),
-        question TEXT NOT NULL,
-        answer TEXT NOT NULL,
-        choices TEXT NOT NULL,
-        score INT NOT NULL
-    );
-    `;
-
-    connection.query(createQuizTable, (err, result) => {
-        if (err) {
-            console.error('Error creating table:', err);
-            return;
-        }
-        console.log('Quiz Table created');
-    });
-
-    const createDetailQuizTable = `
-    CREATE TABLE IF NOT EXISTS detail_quizzes (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        quiz_id INT NOT NULL,
-        FOREIGN KEY (quiz_id) REFERENCES quizzes(id),
-        user_id INT NOT NULL,
-        FOREIGN KEY (user_id) REFERENCES users(id),
-        answer TEXT NOT NULL,
-        score INT NOT NULL
-    );
-    `;
-
-    connection.query(createDetailQuizTable, (err, result) => {
-        if (err) {
-            console.error('Error creating table:', err);
-            return;
-        }
-        console.log('Detail Quiz Table created');
-    });
-
     const createDetailProjectTable = `
     CREATE TABLE IF NOT EXISTS detail_projects (
         id INT AUTO_INCREMENT PRIMARY KEY,
