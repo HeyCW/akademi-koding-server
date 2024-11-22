@@ -150,6 +150,10 @@ Resources:
           FromPort: '80'
           ToPort: '80'
           CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: '5173'
+          ToPort: '5173'
+          CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
           CidrIp: 0.0.0.0/0
@@ -168,6 +172,9 @@ Resources:
           FromPort: '3000'
           ToPort: '3000'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
+      SecurityGroupEgress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
 
   SecurityGroupDB:
     Type: AWS::EC2::SecurityGroup
@@ -269,22 +276,6 @@ Resources:
         - Key: Name
           Value: akademi-koding-lb-app
 
-  LoadBalancerServer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: akademi-koding-lb-server
-      Subnets:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      SecurityGroups:
-        - !Ref SecurityGroupAPI
-      Scheme: internal
-      LoadBalancerAttributes:
-        - Key: idle_timeout.timeout_seconds
-          Value: '60'
-      Tags:
-        - Key: Name
-          Value: akademi-koding-lb-server
 
   EC2TemplateApp:
     Type: AWS::EC2::LaunchTemplate
@@ -313,13 +304,13 @@ Resources:
             git clone https://github.com/nicholasf09/akademi-koding.git /home/ec2-user/akademi-koding
 
             # Change directory to the app repository
-            cd akademi-koding
+            cd /home/ec2-user/akademi-koding
 
             # Install the app dependencies
             sudo npm install
 
             # Persist the API endpoint in the environment file
-            echo "VITE_API_ENDPOINT=${LoadBalancerServer.DNSName}" | sudo tee -a /etc/environment
+            echo "VITE_API_ENDPOINT=http://${LoadBalancerApp.DNSName}:80" | sudo tee -a /etc/environment
 
             # Source the environment file to load it into the current shell session
             source /etc/environment
@@ -353,7 +344,7 @@ Resources:
             git clone https://github.com/HeyCW/akademi-koding-server.git /home/ec2-user/akademi-koding-server
 
             # Change directory to the server repository
-            cd akademi-koding-server
+            cd /home/ec2-user/akademi-koding-server
 
             # Install the server dependencies
             sudo npm install
@@ -419,7 +410,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupApp
       LoadBalancerArn: !Ref LoadBalancerApp
-      Port: 80
+      Port: 5173
       Protocol: HTTP
       Tags:
         - Key: Name
@@ -431,8 +422,8 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupServer
-      LoadBalancerArn: !Ref LoadBalancerServer
-      Port: 3000
+      LoadBalancerArn: !Ref LoadBalancerApp
+      Port: 80
       Protocol: HTTP
       Tags:
         - Key: Name
