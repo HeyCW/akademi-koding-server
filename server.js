@@ -18,6 +18,7 @@ const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cors());
+app.options('*', cors());
 
 database.createTable();
 
@@ -175,7 +176,6 @@ app.delete('/delete/course/:slug', async (req, res) => {
 // CRUD user
 app.post('/add/user', async (req, res) => {
     const { username, password } = req.body;
-
     try {
         const newUser = await user.addUser(username, password);
         return res.status(201).json(newUser);

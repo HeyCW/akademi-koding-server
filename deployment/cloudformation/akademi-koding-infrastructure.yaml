@@ -151,8 +151,8 @@ Resources:
           ToPort: '80'
           CidrIp: 0.0.0.0/0
         - IpProtocol: tcp
-          FromPort: '5137'
-          ToPort: '5137'
+          FromPort: '5173'
+          ToPort: '5173'
           CidrIp: 0.0.0.0/0
       SecurityGroupEgress:
         - IpProtocol: -1
@@ -172,6 +172,9 @@ Resources:
           FromPort: '3000'
           ToPort: '3000'
           SourceSecurityGroupId: !Ref SecurityGroupPublic
+      SecurityGroupEgress:
+          - IpProtocol: -1
+            CidrIp: 0.0.0.0/0
 
   SecurityGroupDB:
     Type: AWS::EC2::SecurityGroup
@@ -273,22 +276,6 @@ Resources:
         - Key: Name
           Value: akademi-koding-lb-app
 
-  LoadBalancerServer:
-    Type: AWS::ElasticLoadBalancingV2::LoadBalancer
-    Properties:
-      Name: akademi-koding-lb-server
-      Subnets:
-        - !Ref PrivateSubnet1
-        - !Ref PrivateSubnet2
-      SecurityGroups:
-        - !Ref SecurityGroupAPI
-      Scheme: internal
-      LoadBalancerAttributes:
-        - Key: idle_timeout.timeout_seconds
-          Value: '60'
-      Tags:
-        - Key: Name
-          Value: akademi-koding-lb-server
 
   EC2TemplateApp:
     Type: AWS::EC2::LaunchTemplate
@@ -323,7 +310,7 @@ Resources:
             sudo npm install
 
             # Persist the API endpoint in the environment file
-            echo "VITE_API_ENDPOINT=${LoadBalancerServer.DNSName}" | sudo tee -a /etc/environment
+            echo "VITE_API_ENDPOINT=http://${LoadBalancerApp.DNSName}:80" | sudo tee -a /etc/environment
 
             # Source the environment file to load it into the current shell session
             source /etc/environment
@@ -423,7 +410,7 @@ Resources:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupApp
       LoadBalancerArn: !Ref LoadBalancerApp
-      Port: 80
+      Port: 5173
       Protocol: HTTP
       Tags:
         - Key: Name
@@ -435,8 +422,8 @@ Resources:
       DefaultActions:
         - Type: forward
           TargetGroupArn: !Ref TargetGroupServer
-      LoadBalancerArn: !Ref LoadBalancerServer
-      Port: 3000
+      LoadBalancerArn: !Ref LoadBalancerApp
+      Port: 80
       Protocol: HTTP
       Tags:
         - Key: Name
