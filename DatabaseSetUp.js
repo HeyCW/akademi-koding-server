@@ -55,7 +55,7 @@ function createTable() {
         link TEXT NOT NULL,
         project TEXT NOT NULL
     );
-    `; 
+    `;
 
     connection.query(createModuleTable, (err, result) => {
         if (err) {
@@ -157,10 +157,36 @@ function createTable() {
     );
     `;
 
+    connection.query(createUserChapter, (err, result) => {
+        if (err) {
+            console.error('Error creating table:', err);
+            return;
+        }
+        console.log('Detail Project Table created');
+    });
 
+
+    const createUserEnroll = `
+    CREATE TABLE IF NOT EXISTS user_enroll (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        user_id INT NOT NULL,
+        module_id INT NOT NULL,
+        status ENUM('not completed', 'completed') DEFAULT 'not completed',
+        FOREIGN KEY (user_id) REFERENCES users(id),
+        FOREIGN KEY (module_id) REFERENCES modules(id)
+    );
+    `;
+
+    connection.query(createUserEnroll, (err, result) => {
+        if (err) {
+            console.error('Error creating table:', err);
+            return;
+        }
+        console.log('Detail Project Table created');
+    });
 }
 
-module.exports = {createTable};
+module.exports = { createTable };
 
 
 
