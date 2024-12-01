@@ -126,23 +126,24 @@ function createTable() {
     });
 
 
-    const createUserEnroll = `
-    CREATE TABLE IF NOT EXISTS user_enroll (
+    const createUserEnrollmentsTable = `
+    CREATE TABLE IF NOT EXISTS user_enrollments (
         id INT AUTO_INCREMENT PRIMARY KEY,
         user_id INT NOT NULL,
         module_id INT NOT NULL,
-        status ENUM('not completed', 'completed') DEFAULT 'not completed',
+        completed BOOLEAN DEFAULT FALSE,
         FOREIGN KEY (user_id) REFERENCES users(id),
-        FOREIGN KEY (module_id) REFERENCES modules(id)
+        FOREIGN KEY (module_id) REFERENCES modules(id),
+        UNIQUE(user_id, module_id)
     );
     `;
 
-    connection.query(createUserEnroll, (err, result) => {
+    connection.query(createUserEnrollmentsTable, (err, result) => {
         if (err) {
-            console.error('Error creating table:', err);
+            console.error("Error creating user_enrollments table:", err);
             return;
         }
-        console.log('Detail Project Table created');
+        console.log("User Enrollments Table created");
     });
 }
 

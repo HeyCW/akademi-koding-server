@@ -5,6 +5,7 @@ const course = require('./Course');
 const user = require('./User');
 const moduleTable = require('./Module');
 const chapter = require('./Chapter');
+const userEnroll = require('./UserEnroll');
 const multer = require('multer');
 const path = require('path');
 const uploadFile = require('./cobas3'); // Import the S3 upload function
@@ -31,7 +32,7 @@ app.listen(PORT, () => {
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-const checkToken = async (req, res, next) => { 
+const checkToken = async (req, res, next) => {
     const token = req.headers.authorization;
 
     if (!token) {
@@ -84,11 +85,11 @@ app.post('/update/course', async (req, res) => {
     const { id, name, link, slug, description } = req.body;
     const cacheKey = 'courses';
 
-     try {
+    try {
         const updatedCourse = await course.updateCourse(id, name, link, slug, description);
-        
+
         const courses = await course.getCourses();
-        
+
         memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
             if (err) {
                 console.error('Error updating value in Memcached:', err);
@@ -193,7 +194,7 @@ app.post('/login', async (req, res) => {
     console.log('password', password);
     try {
         const loginUser = await user.loginUser(username, password);
-        
+
         if (!loginUser) {
             return res.status(401).json({ message: 'Invalid username or password' });
         }
@@ -231,13 +232,13 @@ app.post('/add/module', async (req, res) => {
 
 app.post('/update/module', async (req, res) => {
     const { id, courseId, name, link, slug, description, project } = req.body;
-    const cacheKey = `module:course:${courseId}`; 
+    const cacheKey = `module:course:${courseId}`;
 
     try {
-        
+
         const updatedModule = await moduleTable.updateModule(id, name, link, slug, description, project);
         const modules = await moduleTable.getModuleByCourseId(courseId);
-        
+
         memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
             if (err) {
                 console.error('Error updating module cache in Memcached:', err);
@@ -416,7 +417,7 @@ app.delete('/delete/module/id/:idModule', async (req, res) => {
 // CRUD chapter
 app.post('/add/chapter', async (req, res) => {
     const { module_id, name, type, content } = req.body;
-    const cacheKey = `chapters:module:${module_id}`; 
+    const cacheKey = `chapters:module:${module_id}`;
 
     try {
         const newChapter = await chapter.addChapter(module_id, name, type, content);
@@ -552,7 +553,7 @@ app.get('/modules/:module_id/chapters', async (req, res) => {
         res.status(500).send({ error: 'Error getting chapters' });
     }
 
-}); 
+});
 
 
 app.delete('/delete/chapter/:id', async (req, res) => {
@@ -581,21 +582,46 @@ app.get('/modules/:moduleId/chapters', async (req, res) => {
     }
 });
 
-    app.get('/module/:moduleId/projects', async (req, res) => {
-        const { moduleId } = req.params;
+app.get('/module/:moduleId/projects', async (req, res) => {
+    const { moduleId } = req.params;
 
-        try {
-            const projects = await moduleTable.getProjectByModuleId(moduleId);
+    try {
+        const projects = await moduleTable.getProjectByModuleId(moduleId);
 
-            if (!projects || projects.length === 0) {
-                return res.status(404).send({ message: 'No projects found for this module.' });
-            }
-
-            return res.status(200).send(projects);
-        } catch (error) {
-            console.error('Error fetching projects by module:', error.message);
-            return res.status(500).send({ message: 'Internal Server Error', error: error.message });
+        if (!projects || projects.length === 0) {
+            return res.status(404).send({ message: 'No projects found for this module.' });
         }
-    });
+
+        return res.status(200).send(projects);
+    } catch (error) {
+        console.error('Error fetching projects by module:', error.message);
+        return res.status(500).send({ message: 'Internal Server Error', error: error.message });
+    }
+});
+
+app.post('/enroll', async (req, res) => {
+    const { userId, moduleId } = req.body;
+
+    try {
+        // Check if the user has an active enrollment
+        const activeEnrollments = await userEnroll.checkActiveEnrollment(userId);
+        if (activeEnrollments.length > 0) {
+            return res.status(400).json({
+                message: 'You must complete your current module before enrolling in a new one.',
+            });
+        }
+
+        // Enroll the user in a new module
+        const newEnrollment = await userEnroll.enrollUser(userId, moduleId);
+        res.status(201).json({
+            message: 'Successfully enrolled in module.',
+            enrollment: newEnrollment,
+        });
+    } catch (error) {
+        console.error('Error enrolling user:', error);
+        res.status(500).json({ message: 'Server error. Please try again later.' });
+    }
+});
+
 
 

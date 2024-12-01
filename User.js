@@ -20,7 +20,7 @@ function encryptPassword(password) {
 function decryptPassword(password) {
     const decrypted = CryptoJS.AES.decrypt(password, process.env.CRYPTO_SECRET).toString(CryptoJS.enc.Utf8);
     return decrypted;
-}   
+}
 
 function addUser(username, password) {
     return new Promise((resolve, reject) => {
@@ -31,16 +31,16 @@ function addUser(username, password) {
         const encryptedPassword = encryptPassword(password);
 
         connection.query(
-            `INSERT INTO users (username, password, token) VALUES (?, ?, ?)`, 
-            [username, encryptedPassword, token], 
+            `INSERT INTO users (username, password, token) VALUES (?, ?, ?)`,
+            [username, encryptedPassword, token],
             (err, result) => {
                 if (err) {
                     if (err.code === 'ER_DUP_ENTRY') {
                         return reject({ error: 'Username already exists' });
                     }
-                    return reject(err); 
+                    return reject(err);
                 }
-                resolve({ message: 'User added successfully' }); 
+                resolve({ message: 'User added successfully' });
             }
         );
     });
@@ -54,27 +54,31 @@ function loginUser(username, password) {
             [username],
             (err, result) => {
                 if (err) {
-                    console.error('Error logging in:', err);
-                    return reject(err);
+                    console.error('Error querying the database:', err);
+                    return reject(err); // Reject on error
                 }
-                
+
                 if (result.length === 0) {
-                    return resolve(null);
+                    return resolve(null); // Resolve with null if user not found
                 }
 
                 const user = result[0];
-
-                const decryptedPassword = decryptPassword(user.password, process.env.CRYPTO_SECRET);
+                const decryptedPassword = decryptPassword(user.password);
 
                 if (password !== decryptedPassword) {
-                    return resolve(null);
+                    return resolve(null); // Resolve with null if password mismatch
                 }
 
                 const token = jwt.sign({ username }, process.env.JWT_SECRET, {
                     expiresIn: '2h'
                 });
 
-                return resolve(token);
+                // Resolve with the user data and token
+                return resolve({
+                    id: user.id,
+                    username: user.username,
+                    token,
+                });
             }
         );
     });
@@ -82,4 +86,4 @@ function loginUser(username, password) {
 
 
 
-module.exports = {addUser, loginUser};
+module.exports = { addUser, loginUser };
