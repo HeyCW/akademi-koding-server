@@ -635,7 +635,7 @@ app.get('/projects/:idModule', async (req, res) => {
     }
 });
 
-app.post('/project/update', async (req, res) => {
+app.post('/project/update/', async (req, res) => {
     const { id, comment, score } = req.body;
 
     try {

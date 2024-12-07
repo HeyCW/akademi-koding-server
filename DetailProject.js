@@ -22,7 +22,7 @@ const getProjectDetails = async (idModule) => {
                 return resolve({ message: 'No project found for the given user and module.' });
             }
 
-            resolve(results[0]);
+            resolve(results);
         });
     });
 };
