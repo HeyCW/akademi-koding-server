@@ -12,24 +12,33 @@ Resources:
         Fn::Base64: 
           !Sub |
             #!/bin/bash
-
             # Update the package repository
             sudo yum update -y
-            
+
             # Install node
             sudo yum install nodejs npm -y
-
+           
             # Install git
             sudo yum install git -y
 
-            # Git clone the app repository
-            git clone https://github.com/nicholasf09/akademi-koding.git /home/ec2-user/akademi-koding
+            # Git clone the server repository
+            git clone https://github.com/HeyCW/akademi-koding-server.git /home/ec2-user/akademi-koding-server
 
-            # Change directory to the app repository
-            cd /home/ec2-user/akademi-koding
+            # Change directory to the server repository
+            cd /home/ec2-user/akademi-koding-server
 
-            # Install the app dependencies
+            # Install the server dependencies
             sudo npm install
+            
+            # Source the environment file to load DB_ENDPOINT
+            source /etc/environment
 
-            # Start the app
-            sudo npm run dev -- --host
+            node CreateDB.js
+
+            sudo npm install -g pm2
+
+            pm2 start server.js --name "akademi-koding-server" --env production
+
+            # Simpan konfigurasi agar aplikasi tetap berjalan setelah reboot
+            pm2 save
+            pm2 startup

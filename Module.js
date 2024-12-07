@@ -17,7 +17,7 @@ function addModule(course_id, name, link, slug, description, project) {
                     console.error('Error adding module:', err);
                     return reject(err);
                 }
-                resolve({ message: 'Module added' });
+                resolve({ 'id': result.insertId, 'name': name, 'link': link, 'slug': slug, 'description': description, 'project': project });
             }
         );
     });

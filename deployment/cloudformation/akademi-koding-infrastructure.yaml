@@ -315,8 +315,12 @@ Resources:
             # Source the environment file to load it into the current shell session
             source /etc/environment
 
-            # Start the app
-            sudo npm run dev -- --host
+            sudo npm run build
+
+            sudo npm install -g serve
+
+            serve -s dist -l 5173
+
 
   EC2TemplateServer:
     Type: AWS::EC2::LaunchTemplate
@@ -349,11 +353,10 @@ Resources:
             # Install the server dependencies
             sudo npm install
             
-            node CreateDB.js
 
             # Persist the DB endpoint in the environment file
             echo "DB_ENDPOINT=${DBInstance.Endpoint.Address}" | sudo tee -a /etc/environment
-            echo "ELASTICCACHE_ENDPOINT=123" | sudo tee -a /etc/environment
+            echo "ELASTICACHE_ENDPOINT=123" | sudo tee -a /etc/environment
             echo "DB_USERNAME=Admin123" | sudo tee -a /etc/environment
             echo "DB_PASSWORD=Admin12345" | sudo tee -a /etc/environment
             echo "JWT_SECRET=7xLw9QpM3BnVc2K" | sudo tee -a /etc/environment
@@ -362,8 +365,12 @@ Resources:
             # Source the environment file to load DB_ENDPOINT
             source /etc/environment
 
+            node CreateDB.js
+
             # Start the server
             sudo npm start
+        
+
 
   TargetGroupApp:
     Type: AWS::ElasticLoadBalancingV2::TargetGroup
@@ -436,9 +443,9 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref EC2TemplateApp
         Version: !GetAtt EC2TemplateApp.LatestVersionNumber
-      MinSize: 1
-      MaxSize: 3
-      DesiredCapacity: 2
+      MinSize: 2
+      MaxSize: 5
+      DesiredCapacity: 3
       VPCZoneIdentifier:
         - !Ref PublicSubnet1
         - !Ref PublicSubnet2
@@ -467,9 +474,9 @@ Resources:
       LaunchTemplate:
         LaunchTemplateId: !Ref EC2TemplateServer
         Version: !GetAtt EC2TemplateServer.LatestVersionNumber
-      MinSize: 1
-      MaxSize: 3
-      DesiredCapacity: 2
+      MinSize: 2
+      MaxSize: 5
+      DesiredCapacity: 3
       VPCZoneIdentifier:
         - !Ref PrivateSubnet1
         - !Ref PrivateSubnet2
