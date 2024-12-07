@@ -92,9 +92,25 @@ function deleteCourse(slug) {
     });
 }
 
+function deleteCourseById(id) {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `DELETE FROM courses WHERE id = ?`, 
+            [id],
+            (err, result) => {
+                if (err) {
+                    console.error('Error deleting course:', err);
+                    return reject(err);
+                }
+                resolve({ message: 'Course deleted' });
+            }
+        );
+    });
+}
 
 
-module.exports = { addCourse, updateCourse, getCourses, getCourse, deleteCourse };
+
+module.exports = { addCourse, updateCourse, getCourses, getCourse, deleteCourse, deleteCourseById };
 
 
 
