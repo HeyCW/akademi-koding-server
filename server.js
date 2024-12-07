@@ -3,7 +3,8 @@ const express = require('express');
 const database = require('./DatabaseSetUp');
 const course = require('./Course');
 const user = require('./User');
-const moduleTable = require('./Module');
+const moduleTable = require('./Module');    
+const DetailProject = require('./DetailProject');
 const chapter = require('./Chapter');
 const userEnroll = require('./UserEnroll');
 const multer = require('multer');
@@ -622,6 +623,43 @@ app.post('/enroll', async (req, res) => {
         res.status(500).json({ message: 'Server error. Please try again later.' });
     }
 });
+
+app.get('/projects/:idModule', async (req, res) => {
+    const { idModule } = req.params;
+    try {
+        const projectDetails = await DetailProject.getProjectDetails(idModule);
+        res.status(200).json(projectDetails);
+    } catch (error) {
+        console.error('Error fetching project details:', error);
+        res.status(500).json({ message: 'Server error. Please try again later.' });
+    }
+});
+
+app.post('/project/update', async (req, res) => {
+    const { id, comment, score } = req.body;
+
+    try {
+        const updateResponse = await DetailProject.updateProject(id, comment, score);
+        res.status(200).json(updateResponse);
+    } catch (error) {
+        console.error('Error updating project:', error);
+        res.status(500).json({ message: 'Server error. Please try again later.' });
+    }
+});
+
+// API Endpoint to submit a project
+app.post('/api/project/submit', async (req, res) => {
+    const { idUser, idModule, project } = req.body;
+
+    try {
+        const submitResponse = await DetailProject.submitProject(idUser, idModule, project);
+        res.status(201).json(submitResponse);
+    } catch (error) {
+        console.error('Error submitting project:', error);
+        res.status(500).json({ message: 'Server error. Please try again later.' });
+    }
+});
+
 
 
 

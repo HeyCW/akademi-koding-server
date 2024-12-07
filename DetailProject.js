@@ -8,11 +8,11 @@ connection.connect(err => {
     console.log('Connected to Local');
 });
 
-const getProjectDetails = async (idUser, idModule) => {
+const getProjectDetails = async (idModule) => {
     return new Promise((resolve, reject) => {
-        const query = `SELECT * FROM detail_projects WHERE id_user = ? AND id_module = ?`;
+        const query = `SELECT * FROM detail_projects WHERE module_id = ?`;
 
-        connection.query(query, [idUser, idModule], (err, results) => {
+        connection.query(query, [idModule], (err, results) => {
             if (err) {
                 console.error('Error fetching project details:', err);
                 return reject(err);
@@ -49,7 +49,7 @@ const updateProject = async (id, comment, score) => {
 const submitProject = async (idUser, idModule, project) => {
     return new Promise((resolve, reject) => {
         connection.query(
-            `INSERT INTO detail_projects (id_user, id_module, project) VALUES (?, ?, ?)`,
+            `INSERT INTO detail_projects (user_id, module_id, project) VALUES (?, ?, ?)`,
             [idUser, idModule, project],
             (err, result) => {
                 if (err) {
