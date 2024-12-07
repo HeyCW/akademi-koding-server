@@ -59,7 +59,7 @@ app.get('/health', (req, res) => {
 });
 
 // CRUD course
-app.post('/add/course', upload.single('image'), async (req, res) => {
+app.post('/add/course', checkToken, upload.single('image'), async (req, res) => {
     const { name, slug, link, description } = req.body;
     const cacheKey = 'courses';
 
@@ -82,7 +82,7 @@ app.post('/add/course', upload.single('image'), async (req, res) => {
 });
 
 
-app.post('/update/course', async (req, res) => {
+app.post('/update/course', checkToken, async (req, res) => {
     const { id, name, link, slug, description } = req.body;
     const cacheKey = 'courses';
     console.log(link);
@@ -106,7 +106,7 @@ app.post('/update/course', async (req, res) => {
     }
 });
 
-app.get('/courses', async (req, res) => {
+app.get('/courses', checkToken, async (req, res) => {
     const cacheKey = 'courses';
 
     const data = await new Promise((resolve, reject) => {
@@ -132,7 +132,7 @@ app.get('/courses', async (req, res) => {
 });
 
 
-app.get('/course/:slug', async (req, res) => {
+app.get('/course/:slug',checkToken, async (req, res) => {
     const cacheKey = `course:${req.params.slug}`;
 
     try {
@@ -166,10 +166,31 @@ app.get('/course/:slug', async (req, res) => {
 });
 
 
-app.delete('/delete/course/:slug', async (req, res) => {
+app.delete('/delete/course/:slug', checkToken, async (req, res) => {
     try {
         const delete_course = await course.deleteCourse(req.params.slug);
         res.status(200).send(delete_course);
+    } catch (error) {
+        res.status(500).send({ error: 'Error deleting course' });
+    }
+});
+
+app.post('/delete/course', checkToken, async (req, res) => {
+    const cacheKey = 'courses';
+    try {
+        const id = req.body.id;
+        const delete_course = await course.deleteCourseById(id);
+        if (delete_course) {
+            const courses = await course.getCourses();
+            await new Promise((resolve, reject) => {
+                memcached.set(cacheKey, JSON.stringify(courses), 600, (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+        res.status(200).send({ message: 'Course deleted successfully', data: delete_course });
+
     } catch (error) {
         res.status(500).send({ error: 'Error deleting course' });
     }
@@ -208,9 +229,10 @@ app.post('/login', async (req, res) => {
 });
 
 // CRUD module
-app.post('/add/module', async (req, res) => {
+app.post('/add/module', checkToken, async (req, res) => {
     const { course_id, name, link, slug, description, project } = req.body;
     const cacheKey = `module:course:${course_id}`;
+    const cacheKey2 = 'modules';
     console.log('cacheKey:', cacheKey);
 
     try {
@@ -218,6 +240,13 @@ app.post('/add/module', async (req, res) => {
         const modules = await moduleTable.getModuleByCourseId(course_id);
 
         memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+            if (err) {
+                console.error('Error updating cache in Memcached:', err);
+            }
+        });
+
+        const allModules = await moduleTable.getAllModules();
+        memcached.set(cacheKey2, JSON.stringify(allModules), 600, (err) => {
             if (err) {
                 console.error('Error updating cache in Memcached:', err);
             }
@@ -231,9 +260,10 @@ app.post('/add/module', async (req, res) => {
     }
 });
 
-app.post('/update/module', async (req, res) => {
+app.post('/update/module', checkToken, async (req, res) => {
     const { id, courseId, name, link, slug, description, project } = req.body;
     const cacheKey = `module:course:${courseId}`;
+    const cacheKey2 = 'modules';
 
     try {
 
@@ -241,6 +271,13 @@ app.post('/update/module', async (req, res) => {
         const modules = await moduleTable.getModuleByCourseId(courseId);
 
         memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+            if (err) {
+                console.error('Error updating module cache in Memcached:', err);
+            }
+        });
+
+        const allModules = await moduleTable.getAllModules();
+        memcached.set(cacheKey2, JSON.stringify(allModules), 600, (err) => {
             if (err) {
                 console.error('Error updating module cache in Memcached:', err);
             }
@@ -256,7 +293,7 @@ app.post('/update/module', async (req, res) => {
 
 
 
-app.get('/modules', async (req, res) => {
+app.get('/modules', checkToken, async (req, res) => {
     const cacheKey = 'modules';
 
     try {
@@ -288,7 +325,7 @@ app.get('/modules', async (req, res) => {
     }
 });
 
-app.get('/module/:slug', async (req, res) => {
+app.get('/module/:slug', checkToken, async (req, res) => {
     const cacheKey = `module:${req.params.slug}`;
     try {
         memcached.get(cacheKey, (err, data) => {
@@ -325,7 +362,7 @@ app.get('/module/:slug', async (req, res) => {
     }
 });
 
-app.get('/module/get/:idModule', async (req, res) => {
+app.get('/module/get/:idModule', checkToken, async (req, res) => {
     const cacheKey = `module:${req.params.idModule}`;
 
     try {
@@ -361,7 +398,7 @@ app.get('/module/get/:idModule', async (req, res) => {
 });
 
 
-app.get('/module/course/:course_id', async (req, res) => {
+app.get('/module/course/:course_id', checkToken, async (req, res) => {
 
     const cacheKey = `module:course:${req.params.course_id}`;
     console.log('cacheKey:', cacheKey);
@@ -397,7 +434,7 @@ app.get('/module/course/:course_id', async (req, res) => {
     }
 });
 
-app.delete('/delete/module/:slug', async (req, res) => {
+app.delete('/delete/module/:slug', checkToken, async (req, res) => {
     try {
         const delete_module = await moduleTable.removeModule(req.params.slug);
         res.status(200).send(delete_module);
@@ -406,9 +443,33 @@ app.delete('/delete/module/:slug', async (req, res) => {
     }
 });
 
-app.delete('/delete/module/id/:idModule', async (req, res) => {
+app.post('/delete/module', checkToken, async (req, res) => {
     try {
-        const delete_module = await moduleTable.removeModuleById(req.params.idModule);
+        const id = req.body.id;
+        const idCourse = req.body.idCourse;
+        const delete_module = await moduleTable.removeModuleById(id);
+
+        if (delete_module) {
+            const cacheKey = `modules`;
+            const cacheKey2 = `module:course:${idCourse}`;
+
+            const modules = await moduleTable.getAllModules();
+            
+            await new Promise((resolve, reject) => {
+                memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+
+            await new Promise((resolve, reject) => {
+                memcached.set(cacheKey2, JSON.stringify(modules), 600, (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
         res.status(200).send(delete_module);
     } catch (error) {
         res.status(500).send({ error: 'Error deleting module' });
@@ -416,13 +477,13 @@ app.delete('/delete/module/id/:idModule', async (req, res) => {
 });
 
 // CRUD chapter
-app.post('/add/chapter', async (req, res) => {
+app.post('/add/chapter', checkToken, async (req, res) => {
     const { module_id, name, type, content } = req.body;
     const cacheKey = `chapters:module:${module_id}`;
-
+    
     try {
         const newChapter = await chapter.addChapter(module_id, name, type, content);
-        const chapters = await chapter.getChaptersByModuleId(module_id);
+        const chapters = await chapter.getChapterByModuleId(module_id);
 
         memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
             if (err) {
@@ -438,7 +499,7 @@ app.post('/add/chapter', async (req, res) => {
     }
 });
 
-app.post('/update/chapter', async (req, res) => {
+app.post('/update/chapter', checkToken, async (req, res) => {
     try {
         const { id, name, type, content } = req.body;
         const updatedChapter = await chapter.updateChapter(id, name, type, content);
@@ -448,7 +509,7 @@ app.post('/update/chapter', async (req, res) => {
     }
 });
 
-app.get('/chapters', async (req, res) => {
+app.get('/chapters', checkToken, async (req, res) => {
 
     const cacheKey = 'chapters';
 
@@ -480,7 +541,7 @@ app.get('/chapters', async (req, res) => {
     }
 });
 
-app.get('/chapter/:id', async (req, res) => {
+app.get('/chapter/:id', checkToken, async (req, res) => {
 
     const cacheKey = `chapter:${req.params.id}`;
 
@@ -523,7 +584,7 @@ app.get('/chapter/:id', async (req, res) => {
     }
 });
 
-app.get('/modules/:module_id/chapters', async (req, res) => {
+app.get('/modules/:module_id/chapters', checkToken, async (req, res) => {
 
     const cacheKey = `chapters:module:${req.params.module_id}`;
 
@@ -557,16 +618,32 @@ app.get('/modules/:module_id/chapters', async (req, res) => {
 });
 
 
-app.delete('/delete/chapter/:id', async (req, res) => {
+app.post('/delete/chapter', checkToken, async (req, res) => {
     try {
-        const delete_chapter = await chapter.removeChapterById(req.params.id);
+        const id = req.body.id;
+        const module_id = req.body.module_id;
+        const delete_chapter = await chapter.removeChapterById(id);
+        const cacheKey = `chapters:module:${module_id}`;
+
+        if (delete_chapter) {
+
+            const modules = await chapter.getChapterByModuleId(module_id);
+            
+            await new Promise((resolve, reject) => {
+                memcached.set(cacheKey, JSON.stringify(modules), 600, (err) => {
+                    if (err) return reject(err);
+                    resolve();
+                });
+            });
+        }
+
         res.status(200).send(delete_chapter);
     } catch (error) {
         res.status(500).send({ error: 'Error deleting chapter' });
     }
 });
 
-app.get('/modules/:moduleId/chapters', async (req, res) => {
+app.get('/modules/:moduleId/chapters', checkToken, async (req, res) => {
     const { moduleId } = req.params;
 
     try {
@@ -583,7 +660,7 @@ app.get('/modules/:moduleId/chapters', async (req, res) => {
     }
 });
 
-app.get('/module/:moduleId/projects', async (req, res) => {
+app.get('/module/:moduleId/projects', checkToken, async (req, res) => {
     const { moduleId } = req.params;
 
     try {
@@ -600,7 +677,7 @@ app.get('/module/:moduleId/projects', async (req, res) => {
     }
 });
 
-app.post('/enroll', async (req, res) => {
+app.post('/enroll', checkToken, async (req, res) => {
     const { userId, moduleId } = req.body;
 
     try {
