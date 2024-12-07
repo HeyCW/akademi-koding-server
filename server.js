@@ -85,6 +85,7 @@ app.post('/add/course', upload.single('image'), async (req, res) => {
 app.post('/update/course', async (req, res) => {
     const { id, name, link, slug, description } = req.body;
     const cacheKey = 'courses';
+    console.log(link);
 
     try {
         const updatedCourse = await course.updateCourse(id, name, link, slug, description);
@@ -141,7 +142,6 @@ app.get('/course/:slug', async (req, res) => {
             }
 
             if (data) {
-                // console.log('Data from Memcached:', data);
                 return res.status(200).send(JSON.parse(data));
             } else {
                 course.getCourse(req.params.slug).then(course_slug => {
@@ -300,25 +300,26 @@ app.get('/module/:slug', async (req, res) => {
                 // console.log('Data from Memcached:', data);
                 return res.status(200).send(JSON.parse(data));
             }
-            else {
-                moduleTable.getModuleBySlug(req.params.slug).then(module_slug => {
-                    if (!module_slug.length) {
-                        return res.status(404).send({ error: 'Module not found' });
+            try {
+                const module_slug = moduleTable.getModuleBySlug(req.params.slug);
+
+                if (!module_slug.length) {
+                    return res.status(404).send({ error: 'Module not found' });
+                }
+
+                // Simpan ke cache
+                memcached.set(cacheKey, JSON.stringify(module_slug), 600, (err) => {
+                    if (err) {
+                        console.error('Error setting value in Memcached:', err);
                     }
-                    memcached.set(cacheKey, JSON.stringify(module_slug), 600, (err) => {
-                        if (err) {
-                            console.error('Error setting value in Memcached:', err);
-                        }
-                    });
-
-                    res.status(200).send(module_slug);
-                }).catch(error => {
-                    res.status(500).send({ error: 'Error getting module' });
                 });
-            }
 
+                // Kirim data ke klien
+                return res.status(200).send(module_slug);
+            } catch (error) {
+                return res.status(500).send({ error: 'Error getting module' });
+            }
         });
-        res.status(200).send(module_slug);
     } catch (error) {
         res.status(500).send({ error: 'Error getting module' });
     }
@@ -369,12 +370,11 @@ app.get('/module/course/:course_id', async (req, res) => {
 
         memcached.get(cacheKey, (err, data) => {
             if (err) {
-                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+                res.status(500).send({ error: 'Error retrieving value from Memcached' });
             }
 
             if (data) {
-                // console.log('Data from Memcached:', data);
-                return res.status(200).send(JSON.parse(data));
+                res.status(200).send(JSON.parse(data));
             } else {
                 moduleTable.getModuleByCourseId(req.params.course_id).then(module_course => {
                     if (!module_course.length) {

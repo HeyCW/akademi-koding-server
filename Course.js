@@ -31,8 +31,8 @@ function addCourse(name, link, slug, description) {
 function updateCourse(id, name, link, slug, description) {
     return new Promise((resolve, reject) => {
         connection.query(
-            `UPDATE courses SET name = ?, description = ?, slug = ? WHERE id=?`,
-            [name, description, slug, id],
+            `UPDATE courses SET name = ?, description = ?, slug = ?, link=? WHERE id=?`,
+            [name, description, slug, link, id],
             (err, result) => {
                 if (err) {
                     console.error('Error updating course:', err);
