@@ -18,7 +18,7 @@ function addChapter(module_id, name, type, content) {
                     console.error('Error adding chapter:', err);
                     return reject(err);
                 }
-                resolve({ message: 'Chapter added' });
+                resolve({ 'id': result.insertId, 'module_id': module_id, 'name': name, 'type': type, 'content': content });
             }
         );
     });
@@ -81,6 +81,7 @@ function getChapterByModuleId(module_id) {
                     console.error('Error getting chapter:', err);
                     return reject(err);
                 }
+                // console.log(result);
                 resolve(result);
             }
         );

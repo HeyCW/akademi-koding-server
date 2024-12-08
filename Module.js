@@ -155,4 +155,26 @@ function getProjectByModuleId(slugModule) {
     });
 }
 
-module.exports = { addModule, updateModule, getAllModules, getModuleBySlug, getModuleById, getModuleByCourseId, removeModule, removeModuleById, getProjectByModuleId };
+function getModuleIdBySlug(moduleSlug) {
+    return new Promise((resolve, reject) => {
+        // Query untuk mencari module berdasarkan slug
+        connection.query(
+            `SELECT id FROM modules WHERE slug = ?`, 
+            [moduleSlug], 
+            (err, result) => {
+                if (err) {
+                    console.error('Error fetching module:', err); // Menangani error
+                    return reject(err); // Menyelesaikan promise dengan error
+                }
+                // Jika ditemukan, kembalikan ID module
+                if (result.length > 0) {
+                    resolve(String(result[0].id)); // Mengembalikan module_id
+                } else {
+                    reject(new Error('Module not found'));
+                }
+            }
+        );
+    });
+}
+
+module.exports = { addModule, updateModule, getAllModules, getModuleBySlug, getModuleById, getModuleByCourseId, removeModule, removeModuleById, getProjectByModuleId, getModuleIdBySlug };
