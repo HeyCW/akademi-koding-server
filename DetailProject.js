@@ -46,11 +46,11 @@ const updateProject = async (id, comment, score) => {
     });
 };
 
-const submitProject = async (idUser, idModule, project) => {
+const submitProject = async (idUser, idModule, link) => {
     return new Promise((resolve, reject) => {
         connection.query(
-            `INSERT INTO detail_projects (user_id, module_id, project) VALUES (?, ?, ?)`,
-            [idUser, idModule, project],
+            `INSERT INTO detail_projects (user_id, module_id, link) VALUES (?, ?, ?)`,
+            [idUser, idModule, link],
             (err, result) => {
                 if (err) {
                     console.error('Error adding project:', err);

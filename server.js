@@ -725,15 +725,30 @@ app.post('/project/update/', async (req, res) => {
 });
 
 // API Endpoint to submit a project
-app.post('/api/project/submit', async (req, res) => {
-    const { idUser, idModule, project } = req.body;
+app.post('/project/submit', async (req, res) => {
+    const { idUser, idModule, link } = req.body;
 
     try {
-        const submitResponse = await DetailProject.submitProject(idUser, idModule, project);
+        const submitResponse = await DetailProject.submitProject(idUser, idModule, link);
         res.status(201).json(submitResponse);
     } catch (error) {
         console.error('Error submitting project:', error);
         res.status(500).json({ message: 'Server error. Please try again later.' });
+    }
+});
+
+app.get('/modules/:moduleSlug', async (req, res) => {
+    const { moduleSlug } = req.params;
+
+    try {
+        const moduleId = await moduleTable.getModuleIdBySlug(moduleSlug);
+        res.status(200).json({ module_id: moduleId });
+    } catch (error) {
+        if (error.message === 'Module not found') {
+            return res.status(404).json({ message: 'Module not found' });
+        }
+        console.error('Error fetching module:', error);
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
