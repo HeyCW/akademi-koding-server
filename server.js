@@ -3,7 +3,7 @@ const express = require('express');
 const database = require('./DatabaseSetUp');
 const course = require('./Course');
 const user = require('./User');
-const moduleTable = require('./Module');    
+const moduleTable = require('./Module');
 const DetailProject = require('./DetailProject');
 const chapter = require('./Chapter');
 const userEnroll = require('./UserEnroll');
@@ -12,6 +12,9 @@ const path = require('path');
 const uploadFile = require('./cobas3'); // Import the S3 upload function
 const Memcached = require('memcached');
 const jwt = require('jsonwebtoken');
+const { addUserChapter, fetchChapters } = require('./UserChapter');
+
+const connection = require('./Connection');
 
 const memcached = new Memcached(process.env.ELASTICACHE_ENDPOINT || 'localhost:11211');
 const app = express();
@@ -523,38 +526,38 @@ app.get('/chapter/:id', async (req, res) => {
     }
 });
 
-app.get('/modules/:module_id/chapters', async (req, res) => {
+// app.get('/modules/:module_id/chapters', async (req, res) => {
 
-    const cacheKey = `chapters:module:${req.params.module_id}`;
+//     const cacheKey = `chapters:module:${req.params.module_id}`;
 
-    try {
-        memcached.get(cacheKey, (err, data) => {
-            if (err) {
-                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
-            }
+//     try {
+//         memcached.get(cacheKey, (err, data) => {
+//             if (err) {
+//                 return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+//             }
 
-            if (data) {
-                // console.log('Data from Memcached:', data);
-                return res.status(200).send(JSON.parse(data));
-            } else {
-                chapter.getChapterByModuleId(req.params.module_id).then(chapters => {
-                    memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
-                        if (err) {
-                            console.error('Error setting value in Memcached:', err);
-                        }
-                    });
+//             if (data) {
+//                 // console.log('Data from Memcached:', data);
+//                 return res.status(200).send(JSON.parse(data));
+//             } else {
+//                 chapter.getChapterByModuleId(req.params.module_id).then(chapters => {
+//                     memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+//                         if (err) {
+//                             console.error('Error setting value in Memcached:', err);
+//                         }
+//                     });
 
-                    res.status(200).send(chapters);
-                }).catch(error => {
-                    res.status(500).send({ error: 'Error getting chapters' });
-                });
-            }
-        });
-    } catch (error) {
-        res.status(500).send({ error: 'Error getting chapters' });
-    }
+//                     res.status(200).send(chapters);
+//                 }).catch(error => {
+//                     res.status(500).send({ error: 'Error getting chapters' });
+//                 });
+//             }
+//         });
+//     } catch (error) {
+//         res.status(500).send({ error: 'Error getting chapters' });
+//     }
 
-});
+// });
 
 
 app.delete('/delete/chapter/:id', async (req, res) => {
@@ -566,20 +569,20 @@ app.delete('/delete/chapter/:id', async (req, res) => {
     }
 });
 
-app.get('/modules/:moduleId/chapters', async (req, res) => {
-    const { moduleId } = req.params;
+app.post("/modules/:moduleId/chapters", async (req, res) => {
+    const userId = req.body.userId; // User ID from query params
+    const moduleId = req.body.moduleId; // Module ID from route params
+
+    if (!userId) {
+        return res.status(400).json({ error: "Missing userId" });
+    }
 
     try {
-        const chapters = await chapter.getChaptersByModuleId(moduleId);
-
-        if (!chapters || chapters.length === 0) {
-            return res.status(404).send({ message: 'No chapters found for this module.' });
-        }
-
-        return res.status(200).send(chapters);
+        const chapters = await fetchChapters(userId, moduleId);
+        res.json(chapters);
     } catch (error) {
-        console.error('Error fetching chapters by module:', error.message);
-        return res.status(500).send({ message: 'Internal Server Error', error: error.message });
+        console.error("Error fetching chapters:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
 
@@ -601,11 +604,18 @@ app.get('/module/:moduleId/projects', async (req, res) => {
 });
 
 app.post('/enroll', async (req, res) => {
-    const { userId, moduleId } = req.body;
+    const { userId, moduleId, checkOnly } = req.body;
 
     try {
         // Check if the user has an active enrollment
         const activeEnrollments = await userEnroll.checkActiveEnrollment(userId);
+
+        if (checkOnly) {
+            // Return a boolean response if it's a "check only" request
+            const isEnrolled = activeEnrollments.some((enrollment) => enrollment.module_id == moduleId);
+            return res.status(200).json({ isEnrolled });
+        }
+
         if (activeEnrollments.length > 0) {
             return res.status(400).json({
                 message: 'You must complete your current module before enrolling in a new one.',
@@ -659,6 +669,22 @@ app.post('/api/project/submit', async (req, res) => {
         res.status(500).json({ message: 'Server error. Please try again later.' });
     }
 });
+
+// API user chapter progress
+app.post("/user-chapter", async (req, res) => {
+    const { userId, chapterId, status } = req.body;
+    if (!userId || !chapterId || !status) {
+        return res.status(400).json({ error: "Missing required fields" });
+    }
+    try {
+        const response = await addUserChapter(userId, chapterId, status);
+        res.json(response);
+    } catch (error) {
+        console.error("Error handling user chapter request:", error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
 
 
 
