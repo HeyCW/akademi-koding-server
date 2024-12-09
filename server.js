@@ -14,11 +14,10 @@ const Memcached = require('memcached');
 const jwt = require('jsonwebtoken');
 const { addUserChapter, fetchChapters } = require('./UserChapter');
 
-const connection = require('./Connection');
-
 const memcached = new Memcached(process.env.ELASTICACHE_ENDPOINT || 'localhost:11211');
 const app = express();
 const cors = require("cors");
+const connection = require('./Connection');
 const PORT = process.env.PORT || 3000;
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -587,38 +586,38 @@ app.get('/chapter/:id', checkToken, async (req, res) => {
     }
 });
 
-// app.get('/modules/:module_id/chapters', async (req, res) => {
+app.get('/modules/:module_id/chapters', async (req, res) => {
 
-//     const cacheKey = `chapters:module:${req.params.module_id}`;
+    const cacheKey = `chapters:module:${req.params.module_id}`;
 
-//     try {
-//         memcached.get(cacheKey, (err, data) => {
-//             if (err) {
-//                 return res.status(500).send({ error: 'Error retrieving value from Memcached' });
-//             }
+    try {
+        memcached.get(cacheKey, (err, data) => {
+            if (err) {
+                return res.status(500).send({ error: 'Error retrieving value from Memcached' });
+            }
 
-//             if (data) {
-//                 // console.log('Data from Memcached:', data);
-//                 return res.status(200).send(JSON.parse(data));
-//             } else {
-//                 chapter.getChapterByModuleId(req.params.module_id).then(chapters => {
-//                     memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
-//                         if (err) {
-//                             console.error('Error setting value in Memcached:', err);
-//                         }
-//                     });
+            if (data) {
+                // console.log('Data from Memcached:', data);
+                return res.status(200).send(JSON.parse(data));
+            } else {
+                chapter.getChapterByModuleId(req.params.module_id).then(chapters => {
+                    memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+                        if (err) {
+                            console.error('Error setting value in Memcached:', err);
+                        }
+                    });
 
-//                     res.status(200).send(chapters);
-//                 }).catch(error => {
-//                     res.status(500).send({ error: 'Error getting chapters' });
-//                 });
-//             }
-//         });
-//     } catch (error) {
-//         res.status(500).send({ error: 'Error getting chapters' });
-//     }
+                    res.status(200).send(chapters);
+                }).catch(error => {
+                    res.status(500).send({ error: 'Error getting chapters' });
+                });
+            }
+        });
+    } catch (error) {
+        res.status(500).send({ error: 'Error getting chapters' });
+    }
 
-// });
+});
 
 
 app.post('/delete/chapter', checkToken, async (req, res) => {
@@ -646,7 +645,7 @@ app.post('/delete/chapter', checkToken, async (req, res) => {
     }
 });
 
-app.post("/modules/:moduleId/chapters", checkToken, async (req, res) => {
+app.post("/modules/:moduleId/user-chapters", checkToken, async (req, res) => {
     const userId = req.body.userId; // User ID from query params
     const moduleId = req.body.moduleId; // Module ID from route params
 
@@ -777,7 +776,51 @@ app.post("/user-chapter", async (req, res) => {
     }
 });
 
+// Complete module endpoint
+app.post('/complete-module', async (req, res) => {
+    const { userId, moduleId } = req.body;
 
+    console.log('Received complete-chapters request:', { userId, moduleId });
+
+    if (!userId || !moduleId) {
+        return res.status(400).json({ error: 'userId and moduleId are required' });
+    }
+
+    try {
+        const result = await userEnroll.completeEnrollment(userId, moduleId);
+        res.status(200).json(result);
+    } catch (error) {
+        console.error('Error updating user_enrollments:', error);
+        res.status(500).json({ error: 'An error occurred while updating enrollment' });
+    }
+});
+
+
+app.post("/user-enrollment-status", async (req, res) => {
+    const { userId, moduleId } = req.body; // Read from request body
+    console.log('Received user-enrollment-status request:', { userId, moduleId });
+
+    if (!userId || !moduleId) {
+        return res.status(400).json({ error: "userId and moduleId are required" });
+    }
+
+    try {
+        const [rows] = await connection.promise().query(
+            "SELECT completed FROM user_enrollments WHERE user_id = ? AND module_id = ?",
+            [userId, moduleId]
+        );
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: "No enrollment found for given userId and moduleId" });
+        }
+
+        const { completed } = rows[0];
+        res.json({ completed });
+    } catch (err) {
+        console.error("Error fetching user enrollment status:", err);
+        res.status(500).json({ error: "An error occurred while checking enrollment status" });
+    }
+});
 
 
 
