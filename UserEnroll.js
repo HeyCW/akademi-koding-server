@@ -37,16 +37,17 @@ function checkActiveEnrollment(userId) {
 }
 
 // Mark an enrollment as completed (if needed in the future)
-function completeEnrollment(enrollmentId) {
+function completeEnrollment(userId, moduleId) {
     return new Promise((resolve, reject) => {
-        const query = `UPDATE user_enrollments SET completed = TRUE WHERE id = ?`;
-        connection.query(query, [enrollmentId], (err, result) => {
-            if (err) {
+        const query = `UPDATE user_enrollments SET completed = 1 WHERE user_id = ? AND module_id = ?`;
+        connection.promise().query(query, [userId, moduleId]) // Add moduleId in query
+            .then(([result]) => {
+                resolve({ message: 'Enrollment marked as completed.', result });
+            })
+            .catch((err) => {
                 console.error('Error completing enrollment:', err);
-                return reject(err);
-            }
-            resolve({ message: 'Enrollment marked as completed.' });
-        });
+                reject(err);
+            });
     });
 }
 
