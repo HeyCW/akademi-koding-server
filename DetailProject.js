@@ -62,8 +62,25 @@ const submitProject = async (idUser, idModule, link) => {
     });
 }
 
+const getProjectByUser = async (idUser, idModule) => {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `SELECT * FROM detail_projects WHERE user_id = ? AND module_id = ?`,
+            [idUser, idModule],
+            (err, results) => {
+                if (err) {
+                    console.error('Error checking project:', err);
+                    return reject(err);
+                }
+                resolve(results);
+            }
+        );
+    });
+};
+
 module.exports = {
     getProjectDetails,
     updateProject,
     submitProject,
+    getProjectByUser,
 };

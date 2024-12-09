@@ -777,6 +777,24 @@ app.post("/user-chapter", async (req, res) => {
     }
 });
 
+app.get('/detail-projects/submitted', async (req, res) => {
+    const { idUser, idModule } = req.query;
+
+    try {
+        const projectCheck = await DetailProject.getProjectByUser(idUser, idModule);
+        res.status(200).json({ module_id: projectCheck });
+    } catch (error) {
+        if (error.message === 'Module not found') {
+            return res.status(404).json({ message: 'Module not found' });
+        }
+        console.error('Error fetching module:', error);
+        res.status(500).json({ message: 'Server error' });
+    }
+});
+
+
+
+
 
 
 
