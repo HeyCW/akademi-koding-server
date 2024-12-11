@@ -1,12 +1,12 @@
 const connection = require('./Connection');
 
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to RDS:', err);
-        return;
-    }
-    console.log('Connected to Local');
-});
+// connection.connect(err => {
+//     if (err) {
+//         console.error('Error connecting to RDS:', err);
+//         return;
+//     }
+//     console.log('Connected to Local');
+// });
 
 function fetchChapters(userId, moduleId) {
     return new Promise((resolve, reject) => {

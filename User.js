@@ -3,13 +3,13 @@ const jwt = require('jsonwebtoken');
 const CryptoJS = require('crypto-js');
 
 
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to RDS:', err);
-        return;
-    }
-    console.log('Connected to Local');
-});
+// connection.connect(err => {
+//     if (err) {
+//         console.error('Error connecting to RDS:', err);
+//         return;
+//     }
+//     console.log('Connected to Local');
+// });
 
 function encryptPassword(password) {
 
