@@ -25,7 +25,7 @@ function enrollUser(userId, moduleId) {
 // Check if a user has an active enrollment
 function checkActiveEnrollment(userId) {
     return new Promise((resolve, reject) => {
-        const query = `SELECT * FROM user_enrollments WHERE user_id = ? AND completed = FALSE`;
+        const query = `SELECT module_id, completed FROM user_enrollments WHERE user_id = ?`;
         connection.query(query, [userId], (err, results) => {
             if (err) {
                 console.error('Error checking active enrollment:', err);

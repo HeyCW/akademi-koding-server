@@ -683,22 +683,21 @@ app.post('/enroll', checkToken, async (req, res) => {
     const { userId, moduleId, checkOnly } = req.body;
 
     try {
-        // Check if the user has an active enrollment
-        const activeEnrollments = await userEnroll.checkActiveEnrollment(userId);
+        const enrollments = await userEnroll.checkActiveEnrollment(userId);
 
         if (checkOnly) {
-            // Return a boolean response if it's a "check only" request
-            const isEnrolled = activeEnrollments.some((enrollment) => enrollment.module_id == moduleId);
-            return res.status(200).json({ isEnrolled });
+            const enrollment = enrollments.find((e) => e.module_id == moduleId);
+            const isEnrolled = Boolean(enrollment);
+            const completed = enrollment?.completed || 0;
+            return res.status(200).json({ isEnrolled, completed });
         }
 
-        if (activeEnrollments.length > 0) {
+        if (enrollments.some((e) => e.completed === 0)) {
             return res.status(400).json({
                 message: 'You must complete your current module before enrolling in a new one.',
             });
         }
 
-        // Enroll the user in a new module
         const newEnrollment = await userEnroll.enrollUser(userId, moduleId);
         res.status(201).json({
             message: 'Successfully enrolled in module.',
