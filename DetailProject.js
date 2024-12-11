@@ -1,12 +1,12 @@
 const connection = require('./Connection');
 
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to RDS:', err);
-        return;
-    }
-    console.log('Connected to Local');
-});
+// connection.connect(err => {
+//     if (err) {
+//         console.error('Error connecting to RDS:', err);
+//         return;
+//     }
+//     console.log('Connected to Local');
+// });
 
 const getProjectDetails = async (idModule) => {
     return new Promise((resolve, reject) => {
@@ -62,8 +62,25 @@ const submitProject = async (idUser, idModule, link) => {
     });
 }
 
+const getProjectByUser = async (idUser, idModule) => {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            `SELECT * FROM detail_projects WHERE user_id = ? AND module_id = ?`,
+            [idUser, idModule],
+            (err, results) => {
+                if (err) {
+                    console.error('Error checking project:', err);
+                    return reject(err);
+                }
+                resolve(results);
+            }
+        );
+    });
+};
+
 module.exports = {
     getProjectDetails,
     updateProject,
     submitProject,
+    getProjectByUser,
 };

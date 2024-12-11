@@ -2,13 +2,13 @@ const connection = require('./Connection');
 const { S3Client, ListBucketsCommand, ListObjectsCommand } = require('@aws-sdk/client-s3');
 const { fromIni } = require("@aws-sdk/credential-provider-ini");
 
-connection.connect(err => {
-    if (err) {
-        console.error('Error connecting to RDS:', err);
-        return;
-    }
-    console.log('Connected to Local');
-});
+// connection.connect(err => {
+//     if (err) {
+//         console.error('Error connecting to RDS:', err);
+//         return;
+//     }
+//     console.log('Connected to Local');
+// });
 
 function addCourse(name, link, slug, description) {
     return new Promise((resolve, reject) => {
