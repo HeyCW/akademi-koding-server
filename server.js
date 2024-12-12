@@ -502,11 +502,34 @@ app.post('/add/chapter', checkToken, async (req, res) => {
 });
 
 app.post('/update/chapter', checkToken, async (req, res) => {
+    const { id, courseId, name, type, content, module_id } = req.body;
+    console.log('courseId:', module_id);
+    const cacheKey = `chapters:module:${module_id}`;
+    const cacheKey2 = 'chapters';
+
     try {
-        const { id, name, type, content } = req.body;
+        // Update the chapter in the database
         const updatedChapter = await chapter.updateChapter(id, name, type, content);
+
+        // Fetch all chapters for the course and update the cache
+        const chapters = await chapter.getChapterByModuleId(module_id);
+        memcached.set(cacheKey, JSON.stringify(chapters), 600, (err) => {
+            if (err) {
+                console.error('Error updating chapter cache in Memcached:', err);
+            }
+        });
+
+        // Fetch all chapters and update the global cache
+        const allChapters = await chapter.getAllChapters();
+        memcached.set(cacheKey2, JSON.stringify(allChapters), 600, (err) => {
+            if (err) {
+                console.error('Error updating global chapter cache in Memcached:', err);
+            }
+        });
+
         res.status(200).send(updatedChapter);
     } catch (error) {
+        console.error('Error updating chapter:', error);
         res.status(500).send({ error: 'Error updating chapter' });
     }
 });
